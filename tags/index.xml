@@ -10,5 +10,23 @@
 	<atom:link href="https://sre.wiki/tags/index.xml" rel="self" type="application/rss+xml" />
     
     
+    <item>
+      <title>gleam</title>
+      <link>https://sre.wiki/tags/gleam/</link>
+      <pubDate>Fri, 11 Jan 2019 23:53:00 +0800</pubDate>
+      
+      <guid>https://sre.wiki/tags/gleam/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>golang</title>
+      <link>https://sre.wiki/tags/golang/</link>
+      <pubDate>Fri, 11 Jan 2019 23:53:00 +0800</pubDate>
+      
+      <guid>https://sre.wiki/tags/golang/</guid>
+      <description></description>
+    </item>
+    
   </channel>
 </rss>

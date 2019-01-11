@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <title>Gleam - 够用运维 - 小运维的知识wiki</title>
+  <meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+<meta name="theme-color" content="#f8f5ec" />
+<meta name="msapplication-navbutton-color" content="#f8f5ec">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="#f8f5ec">
+
+
+<meta name="author" content="Troy" /><meta name="description" content="Gleam是高性能高效的分布式执行系统，简单、通用、灵活可定制。 Gleam使用Go编写，用户定义的计算过程可以Go的形式，Unix管道工具或" /><meta name="keywords" content="sre, k8s, kubernetes, linux, 够用运维" />
+
+
+
+
+
+
+<meta name="generator" content="Hugo 0.53 with even 4.0.0" />
+
+
+<link rel="canonical" href="https://sre.wiki/post/gleam/" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/manifest.json">
+<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+
+
+<link href="/dist/even.1965f62f.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.css" integrity="sha256-7TyXnr2YU040zfSP+rEcz29ggW4j56/ujTPwjMzyqFY=" crossorigin="anonymous">
+
+
+<meta property="og:title" content="Gleam" />
+<meta property="og:description" content="Gleam是高性能高效的分布式执行系统，简单、通用、灵活可定制。 Gleam使用Go编写，用户定义的计算过程可以Go的形式，Unix管道工具或" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://sre.wiki/post/gleam/" /><meta property="article:published_time" content="2019-01-11T23:53:00&#43;08:00"/>
+<meta property="article:modified_time" content="2019-01-11T23:53:00&#43;08:00"/>
+
+<meta itemprop="name" content="Gleam">
+<meta itemprop="description" content="Gleam是高性能高效的分布式执行系统，简单、通用、灵活可定制。 Gleam使用Go编写，用户定义的计算过程可以Go的形式，Unix管道工具或">
+
+
+<meta itemprop="datePublished" content="2019-01-11T23:53:00&#43;08:00" />
+<meta itemprop="dateModified" content="2019-01-11T23:53:00&#43;08:00" />
+<meta itemprop="wordCount" content="1184">
+
+
+
+<meta itemprop="keywords" content="golang,gleam," />
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Gleam"/>
+<meta name="twitter:description" content="Gleam是高性能高效的分布式执行系统，简单、通用、灵活可定制。 Gleam使用Go编写，用户定义的计算过程可以Go的形式，Unix管道工具或"/>
+
+<!--[if lte IE 9]>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js"></script>
+<![endif]-->
+
+<!--[if lt IE 9]>
+  <script src="https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js"></script>
+<![endif]-->
+
+</head>
+<body>
+  <div id="mobile-navbar" class="mobile-navbar">
+  <div class="mobile-header-logo">
+    <a href="/" class="logo">够用运维</a>
+  </div>
+  <div class="mobile-navbar-icon">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
+</div>
+<nav id="mobile-menu" class="mobile-menu slideout-menu">
+  <ul class="mobile-menu-list">
+    <a href="/">
+        <li class="mobile-menu-item">Home</li>
+      </a><a href="/post/">
+        <li class="mobile-menu-item">Archives</li>
+      </a><a href="/tags/">
+        <li class="mobile-menu-item">Tags</li>
+      </a><a href="/categories/">
+        <li class="mobile-menu-item">Categories</li>
+      </a>
+  </ul>
+</nav>
+  <div class="container" id="mobile-panel">
+    <header id="header" class="header">
+        <div class="logo-wrapper">
+  <a href="/" class="logo">够用运维</a>
+</div>
+
+<nav class="site-navbar">
+  <ul id="menu" class="menu">
+    <li class="menu-item">
+        <a class="menu-item-link" href="/">Home</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/post/">Archives</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/tags/">Tags</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/categories/">Categories</a>
+      </li>
+  </ul>
+</nav>
+    </header>
+
+    <main id="main" class="main">
+      <div class="content-wrapper">
+        <div id="content" class="content">
+          <article class="post">
+    
+    <header class="post-header">
+      <h1 class="post-title">Gleam</h1>
+
+      <div class="post-meta">
+        <span class="post-time"> 2019-01-11 </span>
+        <div class="post-category">
+            <a href="/categories/golang/"> golang </a>
+            </div>
+          <span class="more-meta"> 1184 words </span>
+          <span class="more-meta"> 3 mins read </span>
+        
+      </div>
+    </header>
+
+    <div class="post-toc" id="post-toc">
+  <h2 class="post-toc-title">Contents</h2>
+  <div class="post-toc-content always-active">
+    <nav id="TableOfContents">
+<ul>
+<li>
+<ul>
+<li>
+<ul>
+<li><a href="#高性能">高性能</a></li>
+<li><a href="#高效内存管理">高效内存管理</a></li>
+<li><a href="#灵活性">灵活性</a></li>
+<li><a href="#轻松定制">轻松定制</a></li>
+</ul></li>
+</ul></li>
+<li><a href="#一条flow多种执行方式">一条Flow多种执行方式</a>
+<ul>
+<li><a href="#分布式模式">分布式模式</a>
+<ul>
+<li><a href="#gleam-driver">Gleam Driver</a></li>
+<li><a href="#gleam-master">Gleam Master</a></li>
+<li><a href="#gleam-agent">Gleam Agent</a></li>
+<li><a href="#gleam-executor">Gleam Executor</a></li>
+<li><a href="#dataset">Dataset</a></li>
+</ul></li>
+</ul></li>
+<li><a href="#write-mapper-reducer-in-go">Write Mapper Reducer in Go</a>
+<ul>
+<li><a href="#how-gleam-works">How Gleam works?</a></li>
+<li><a href="#let-us-write-the-driver-program">Let us write the Driver program</a>
+<ul>
+<li><a href="#write-the-mapper-reducer">Write the Mapper Reducer</a></li>
+</ul></li>
+<li><a href="#mapper-reducer-common-mishaps">Mapper Reducer Common Mishaps</a>
+<ul>
+<li><a href="#forget-to-add-gio-init">Forget to add gio.Init() ?</a></li>
+<li><a href="#why-my-string-object-is-becoming-byte">Why my string object is becoming []byte?</a></li>
+</ul></li>
+</ul></li>
+</ul>
+</nav>
+  </div>
+</div>
+    <div class="post-content">
+      
+
+<blockquote>
+<p>Gleam是高性能高效的分布式执行系统，简单、通用、灵活可定制。</p>
+
+<p>Gleam使用Go编写，用户定义的计算过程可以Go的形式，Unix管道工具或者任意流语言编写。</p>
+</blockquote>
+
+<h3 id="高性能">高性能</h3>
+
+<ul>
+<li>纯Go编写的Mapper以及Reducer具有更高的并发</li>
+<li>数据流可以使用内存或者磁盘</li>
+<li>多个map、reduce操作可以合并提升性能</li>
+</ul>
+
+<h3 id="高效内存管理">高效内存管理</h3>
+
+<ul>
+<li>Gleam不存在困扰其他语言的GC问题，每一个执行器都运行在独立的OS进程中。OS管理内存，一台机器可以运行多个执行器。</li>
+<li>Gleam的master节点和agent节点只消耗大约10MB内存</li>
+<li>Gleam会根据数据集大小自动调整所需内存，从而避免手动试错式内存调整。</li>
+</ul>
+
+<h3 id="灵活性">灵活性</h3>
+
+<ul>
+<li>Gleam flow可以单机运行，也可以分布式运行</li>
+<li>可以运行在内存模式，也可以运行在磁盘模式</li>
+</ul>
+
+<h3 id="轻松定制">轻松定制</h3>
+
+<ul>
+<li>Go代码简单</li>
+</ul>
+
+<h1 id="一条flow多种执行方式">一条Flow多种执行方式</h1>
+
+<p>Gleam代码定义flow，指定每一个dataset和计算步骤，然后构建一个DAG，并且有多种方式运行DAG。</p>
+
+<p>默认本地运行，这种方式大多数场景适用。</p>
+
+<p>这里主要讨论分布式模式。</p>
+
+<h2 id="分布式模式">分布式模式</h2>
+
+<p>分布式模式包含多个名词解释：master、agent、excutor、driver。</p>
+
+<h3 id="gleam-driver">Gleam Driver</h3>
+
+<ul>
+<li>driver，使用者用来定义flow，和<code>master</code>、<code>agent</code>、<code>excutors</code>交互。</li>
+</ul>
+
+<h3 id="gleam-master">Gleam Master</h3>
+
+<ul>
+<li>master是单实例服务，用于从agents端收集资源信息</li>
+<li>存储瞬时资源信息，随时可以被重启</li>
+<li>当driver启动后，它联系master索取agents可用的excutors</li>
+</ul>
+
+<h3 id="gleam-agent">Gleam Agent</h3>
+
+<ul>
+<li>agent可以在任意机器上运行</li>
+<li>agents定期向master发送资源信息</li>
+<li>当driver被分配executors后，它直接跟agents联系来启动excutors</li>
+<li>agents也负责管理由excutors产生的datasets</li>
+</ul>
+
+<h3 id="gleam-executor">Gleam Executor</h3>
+
+<ul>
+<li>执行器由agents启动，他们从外部或者先前的datasets读取数据，处理并输出到一个新的dataset。</li>
+</ul>
+
+<h3 id="dataset">Dataset</h3>
+
+<ul>
+<li>datasets由agents管理，数据默认走内存以及网络，不会涉及磁盘。</li>
+<li>不过数据支持持久化到磁盘</li>
+</ul>
+
+<h1 id="write-mapper-reducer-in-go">Write Mapper Reducer in Go</h1>
+
+<h2 id="how-gleam-works">How Gleam works?</h2>
+
+<p>Gleam将二进制driver传给agents，让agents得以注册mapper或者reducer</p>
+
+<h2 id="let-us-write-the-driver-program">Let us write the Driver program</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">var</span> <span class="p">(</span>
+	<span class="nx">MapperTokenizer</span> <span class="p">=</span> <span class="nx">gio</span><span class="p">.</span><span class="nf">RegisterMapper</span><span class="p">(</span><span class="nx">tokenize</span><span class="p">)</span>
+	<span class="nx">MapperAddOne</span>    <span class="p">=</span> <span class="nx">gio</span><span class="p">.</span><span class="nf">RegisterMapper</span><span class="p">(</span><span class="nx">addOne</span><span class="p">)</span>
+	<span class="nx">ReducerSum</span>      <span class="p">=</span> <span class="nx">gio</span><span class="p">.</span><span class="nf">RegisterReducer</span><span class="p">(</span><span class="nx">sum</span><span class="p">)</span>
+<span class="p">)</span>
+
+<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+
+	<span class="c1">// Init() will determine whether the driver program will execute the mapper/reducer or not.
+</span><span class="c1"></span>	<span class="nx">gio</span><span class="p">.</span><span class="nf">Init</span><span class="p">()</span>
+
+	<span class="nx">flow</span><span class="p">.</span><span class="nf">New</span><span class="p">().</span>
+		<span class="nf">TextFile</span><span class="p">(</span><span class="s">&#34;/etc/passwd&#34;</span><span class="p">).</span>
+		<span class="nf">Pipe</span><span class="p">(</span><span class="s">&#34;tr &#39;A-Z&#39; &#39;a-z&#39;&#34;</span><span class="p">).</span>
+		<span class="nf">Mapper</span><span class="p">(</span><span class="nx">MapperTokenizer</span><span class="p">).</span> <span class="c1">// invoke the registered &#34;tokenize&#34; mapper function.
+</span><span class="c1"></span>		<span class="nf">Mapper</span><span class="p">(</span><span class="nx">MapperAddOne</span><span class="p">).</span>  <span class="c1">// invoke the registered &#34;addOne&#34; mapper function.
+</span><span class="c1"></span>		<span class="nf">ReducerBy</span><span class="p">(</span><span class="nx">ReducerSum</span><span class="p">).</span> <span class="c1">// invoke the registered &#34;sum&#34; reducer function.
+</span><span class="c1"></span>		<span class="nf">Sort</span><span class="p">(</span><span class="nx">flow</span><span class="p">.</span><span class="nf">OrderBy</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="kc">true</span><span class="p">)).</span>
+		<span class="nf">Fprintf</span><span class="p">(</span><span class="nx">os</span><span class="p">.</span><span class="nx">Stdout</span><span class="p">,</span> <span class="s">&#34;%s %d\n&#34;</span><span class="p">).</span>
+		<span class="nf">Run</span><span class="p">()</span></code></pre></td></tr></table>
+</div>
+</div>
+<h3 id="write-the-mapper-reducer">Write the Mapper Reducer</h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">Mapper</span> <span class="kd">func</span><span class="p">([]</span><span class="kd">interface</span><span class="p">{})</span> <span class="kt">error</span>
+<span class="kd">type</span> <span class="nx">Reducer</span> <span class="kd">func</span><span class="p">(</span><span class="nx">x</span><span class="p">,</span> <span class="nx">y</span> <span class="kd">interface</span><span class="p">{})</span> <span class="p">(</span><span class="kd">interface</span><span class="p">{},</span> <span class="kt">error</span><span class="p">)</span></code></pre></td></tr></table>
+</div>
+</div>
+<p>We are using interface{} here, without the luxury of strict type checking any more. It&rsquo;s a small cost to pay for a much higher performance.</p>
+
+<p>我们这里使用<code>interface{}</code>不带任何类型检测，提高性能。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">tokenize</span><span class="p">(</span><span class="nx">row</span> <span class="p">[]</span><span class="kd">interface</span><span class="p">{})</span> <span class="kt">error</span> <span class="p">{</span>
+	<span class="nx">line</span> <span class="o">:=</span> <span class="nb">string</span><span class="p">(</span><span class="nx">row</span><span class="p">[</span><span class="mi">0</span><span class="p">].([]</span><span class="kt">byte</span><span class="p">))</span>
+	<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">s</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">strings</span><span class="p">.</span><span class="nf">FieldsFunc</span><span class="p">(</span><span class="nx">line</span><span class="p">,</span> <span class="kd">func</span><span class="p">(</span><span class="nx">r</span> <span class="kt">rune</span><span class="p">)</span> <span class="kt">bool</span> <span class="p">{</span>
+		<span class="k">return</span> <span class="p">!(</span><span class="sc">&#39;A&#39;</span> <span class="o">&lt;=</span> <span class="nx">r</span> <span class="o">&amp;&amp;</span> <span class="nx">r</span> <span class="o">&lt;=</span> <span class="sc">&#39;Z&#39;</span> <span class="o">||</span> <span class="sc">&#39;a&#39;</span> <span class="o">&lt;=</span> <span class="nx">r</span> <span class="o">&amp;&amp;</span> <span class="nx">r</span> <span class="o">&lt;=</span> <span class="sc">&#39;z&#39;</span> <span class="o">||</span> <span class="sc">&#39;0&#39;</span> <span class="o">&lt;=</span> <span class="nx">r</span> <span class="o">&amp;&amp;</span> <span class="nx">r</span> <span class="o">&lt;=</span> <span class="sc">&#39;9&#39;</span><span class="p">)</span>
+	<span class="p">})</span> <span class="p">{</span>
+		<span class="nx">gio</span><span class="p">.</span><span class="nf">Emit</span><span class="p">(</span><span class="nx">s</span><span class="p">)</span>
+	<span class="p">}</span>
+	<span class="k">return</span> <span class="kc">nil</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">addOne</span><span class="p">(</span><span class="nx">row</span> <span class="p">[]</span><span class="kd">interface</span><span class="p">{})</span> <span class="kt">error</span> <span class="p">{</span>
+	<span class="nx">word</span> <span class="o">:=</span> <span class="nb">string</span><span class="p">(</span><span class="nx">row</span><span class="p">[</span><span class="mi">0</span><span class="p">].([]</span><span class="kt">byte</span><span class="p">))</span>
+	<span class="nx">gio</span><span class="p">.</span><span class="nf">Emit</span><span class="p">(</span><span class="nx">word</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+	<span class="k">return</span> <span class="kc">nil</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">sum</span><span class="p">(</span><span class="nx">x</span><span class="p">,</span> <span class="nx">y</span> <span class="kd">interface</span><span class="p">{})</span> <span class="p">(</span><span class="kd">interface</span><span class="p">{},</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">x</span><span class="p">.(</span><span class="kt">uint64</span><span class="p">)</span> <span class="o">+</span> <span class="nx">y</span><span class="p">.(</span><span class="kt">uint64</span><span class="p">),</span> <span class="kc">nil</span>
+<span class="p">}</span></code></pre></td></tr></table>
+</div>
+</div>
+<h2 id="mapper-reducer-common-mishaps">Mapper Reducer Common Mishaps</h2>
+
+<h3 id="forget-to-add-gio-init">Forget to add gio.Init() ?</h3>
+
+<p>Without it, it may get into a fork loop.</p>
+
+<h3 id="why-my-string-object-is-becoming-byte">Why my string object is becoming []byte?</h3>
+
+<p>It&rsquo;s because LuaJIT only knows []byte. This is trying to be compatible with LuaJIT.</p>
+
+    </div>
+
+    <div class="post-copyright">
+  <p class="copyright-item">
+    <span class="item-title">Author</span>
+    <span class="item-content">Troy</span>
+  </p>
+  <p class="copyright-item">
+    <span class="item-title">LastMod</span>
+    <span class="item-content">2019-01-11</span>
+  </p>
+  
+  <p class="copyright-item">
+    <span class="item-title">License</span>
+    <span class="item-content"><a rel="license noopener" href="https://creativecommons.org/licenses/by-nc-nd/4.0/" target="_blank">CC BY-NC-ND 4.0</a></span>
+  </p>
+</div><footer class="post-footer">
+      <div class="post-tags">
+          <a href="/tags/golang/">golang</a>
+          <a href="/tags/gleam/">gleam</a>
+          </div>
+      <nav class="post-nav">
+        
+        
+      </nav>
+    </footer>
+  </article>
+        </div>
+        
+
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="social-links">
+      <a href="mailto:troy.sdu@gmail.com" class="iconfont icon-email" title="email"></a>
+      <a href="https://github.com/k8sedu/" class="iconfont icon-github" title="github"></a>
+  <a href="https://sre.wiki/index.xml" type="application/rss+xml" class="iconfont icon-rss" title="rss"></a>
+</div>
+
+<div class="copyright">
+  <span class="power-by">
+    Powered by <a class="hexo-link" href="https://gohugo.io">Hugo</a>
+  </span>
+  <span class="division">|</span>
+  <span class="theme-info">
+    Theme - 
+    <a class="theme-link" href="https://github.com/olOwOlo/hugo-theme-even">Even</a>
+  </span>
+
+  
+
+  <span class="copyright-year">
+    &copy; 
+    2015 - 
+    2019
+    <span class="heart">
+      <i class="iconfont icon-heart"></i>
+    </span>
+    <span class="author">Troy</span>
+  </span>
+</div>
+    </footer>
+
+    <div class="back-to-top" id="back-to-top">
+      <i class="iconfont icon-up"></i>
+    </div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.2.1/dist/jquery.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/slideout@1.0.1/dist/slideout.min.js" integrity="sha256-t+zJ/g8/KXIJMjSVQdnibt4dlaDxc9zXr/9oNPeWqdg=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.js" integrity="sha256-XVLffZaxoWfGUEbdzuLi7pwaUJv1cecsQJQqGLe7axY=" crossorigin="anonymous"></script>
+<script type="text/javascript" src="/dist/even.069327e0.min.js"></script>
+
+
+
+
+
+
+
+
+</body>
+</html>

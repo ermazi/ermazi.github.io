@@ -3,7 +3,21 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>https://sre.wiki/post/gleam/</loc>
+    <lastmod>2019-01-11T23:53:00+08:00</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  
+  <url>
     <loc>https://sre.wiki/categories/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>https://sre.wiki/post/</loc>
+    <lastmod>2019-01-11T23:53:00+08:00</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0</priority>
   </url>
@@ -15,7 +29,29 @@
   </url>
   
   <url>
+    <loc>https://sre.wiki/tags/gleam/</loc>
+    <lastmod>2019-01-11T23:53:00+08:00</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>https://sre.wiki/tags/golang/</loc>
+    <lastmod>2019-01-11T23:53:00+08:00</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>https://sre.wiki/categories/golang/</loc>
+    <lastmod>2019-01-11T23:53:00+08:00</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0</priority>
+  </url>
+  
+  <url>
     <loc>https://sre.wiki/</loc>
+    <lastmod>2019-01-11T23:53:00+08:00</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0</priority>
   </url>
