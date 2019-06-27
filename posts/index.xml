@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Posts on 二麻运维</title>
+    <link>https://ermazi.com/posts/</link>
+    <description>Recent content in Posts on 二麻运维</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en</language>
+    <lastBuildDate>Sat, 22 Jun 2019 00:57:44 +0800</lastBuildDate>
+    
+	<atom:link href="https://ermazi.com/posts/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>Hello Go</title>
+      <link>https://ermazi.com/2019/hello-go/</link>
+      <pubDate>Sat, 22 Jun 2019 00:57:44 +0800</pubDate>
+      
+      <guid>https://ermazi.com/2019/hello-go/</guid>
+      <description> 我爱你 我的爱人 #!/bin/bash echo hello  </description>
+    </item>
+    
+  </channel>
+</rss>

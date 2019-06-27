@@ -1,32 +1,14 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes" ?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>Tags on 够用运维 - 小运维的知识wiki</title>
-    <link>https://sre.wiki/tags/</link>
-    <description>Recent content in Tags on 够用运维 - 小运维的知识wiki</description>
+    <title>Tags on 二麻运维</title>
+    <link>https://ermazi.com/tags/</link>
+    <description>Recent content in Tags on 二麻运维</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
     
-	<atom:link href="https://sre.wiki/tags/index.xml" rel="self" type="application/rss+xml" />
+	<atom:link href="https://ermazi.com/tags/index.xml" rel="self" type="application/rss+xml" />
     
-    
-    <item>
-      <title>gleam</title>
-      <link>https://sre.wiki/tags/gleam/</link>
-      <pubDate>Fri, 11 Jan 2019 23:53:00 +0800</pubDate>
-      
-      <guid>https://sre.wiki/tags/gleam/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>golang</title>
-      <link>https://sre.wiki/tags/golang/</link>
-      <pubDate>Fri, 11 Jan 2019 23:53:00 +0800</pubDate>
-      
-      <guid>https://sre.wiki/tags/golang/</guid>
-      <description></description>
-    </item>
     
   </channel>
 </rss>
