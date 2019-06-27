@@ -5,25 +5,467 @@
     <description>Recent content in 二麻运维 on 二麻运维</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Sat, 22 Jun 2019 00:57:44 +0800</lastBuildDate>
+    <lastBuildDate>Sat, 23 Mar 2019 01:58:22 +0800</lastBuildDate>
     <atom:link href="https://ermazi.com/" rel="self" type="application/rss+xml" />
     
     <item>
-      <title>Hello Go</title>
-      <link>https://ermazi.com/2019/hello-go/</link>
-      <pubDate>Sat, 22 Jun 2019 00:57:44 +0800</pubDate>
+      <title>关于k8s实战的小技巧</title>
+      <link>https://ermazi.com/2019/%E5%85%B3%E4%BA%8Ek8s%E5%AE%9E%E6%88%98%E7%9A%84%E5%B0%8F%E6%8A%80%E5%B7%A7/</link>
+      <pubDate>Sat, 23 Mar 2019 01:58:22 +0800</pubDate>
       
-      <guid>https://ermazi.com/2019/hello-go/</guid>
+      <guid>https://ermazi.com/2019/%E5%85%B3%E4%BA%8Ek8s%E5%AE%9E%E6%88%98%E7%9A%84%E5%B0%8F%E6%8A%80%E5%B7%A7/</guid>
       <description>
 
-&lt;h1 id=&#34;我爱你&#34;&gt;我爱你&lt;/h1&gt;
+&lt;blockquote&gt;
+&lt;p&gt;实践是检验配置的唯一标准&lt;/p&gt;
+&lt;/blockquote&gt;
 
-&lt;h2 id=&#34;我的爱人&#34;&gt;我的爱人&lt;/h2&gt;
+&lt;h2 id=&#34;1-存储&#34;&gt;1. 存储&lt;/h2&gt;
 
-&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;#!/bin/bash
+&lt;blockquote&gt;
+&lt;p&gt;主要就是etcd了，至少有两处需要etcd，&lt;code&gt;apiserver&lt;/code&gt;和&lt;code&gt;calico网络插件&lt;/code&gt;。也没啥注意事项，保证&lt;code&gt;2N+1&lt;/code&gt;个节点即可，小规模&lt;code&gt;N=1&lt;/code&gt;，大规模&lt;code&gt;N=2&lt;/code&gt;或者&lt;code&gt;N=3&lt;/code&gt;，&lt;code&gt;N&lt;/code&gt;也是可同时挂的节点数量。&lt;/p&gt;
+&lt;/blockquote&gt;
 
-echo hello
+&lt;h3 id=&#34;1-1-配置&#34;&gt;1.1. 配置&lt;/h3&gt;
+
+&lt;blockquote&gt;
+&lt;p&gt;这两处可以共用一套etcd集群，也可以分别使用，calico网络插件对etcd的更新较少，小集群可以与apiserver共用，大了还是分开吧，自行取舍。&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;推荐开启证书双向认证，共包含1套CA以及三套证书，分别用于:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;etcd服务端&lt;/li&gt;
+&lt;li&gt;etcd集群通信&lt;/li&gt;
+&lt;li&gt;etcd客户端&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;如果偷懒，可以共用证书秘钥对，只要ca相同即可。&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;像用于etcd集群通信的证书只能使用IP，所以必须签发携带IP信息的证书，比较麻烦。&lt;/strong&gt;&lt;/p&gt;
+
+&lt;h3 id=&#34;1-2-维护&#34;&gt;1.2. 维护&lt;/h3&gt;
+
+&lt;h4 id=&#34;1-2-1-增减节点&#34;&gt;1.2.1. 增减节点&lt;/h4&gt;
+
+&lt;p&gt;&lt;code&gt;2N+1&lt;/code&gt;的N不是手动配置的，而是根据成员动态调整的，所以在添加member的时候，需要注意member的可用性。&lt;/p&gt;
+
+&lt;h4 id=&#34;1-2-2-迁移节点&#34;&gt;1.2.2. 迁移节点&lt;/h4&gt;
+
+&lt;p&gt;这也是常用的运维操作，比如故障节点迁移，比如单机房变多机房等，具体步骤如下：&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;变更证书，支持新机器域名以及IP访问&lt;/li&gt;
+&lt;li&gt;（假设满足&lt;code&gt;2N+1&lt;/code&gt;个节点的集群）停止待迁移原节点&lt;/li&gt;
+&lt;li&gt;拷贝数据到目标节点&lt;/li&gt;
+&lt;li&gt;检查参数，集群状态设置为&lt;code&gt;existing&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;命令修改原节点对应的member信息peer-urls为新节点endpoint&lt;/li&gt;
+&lt;li&gt;启动目标节点etcd&lt;/li&gt;
+&lt;li&gt;确认状态&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;h3 id=&#34;1-3-监控&#34;&gt;1.3. 监控&lt;/h3&gt;
+
+&lt;ul&gt;
+&lt;li&gt;磁盘性能&lt;/li&gt;
+&lt;li&gt;选主/切主频率&lt;/li&gt;
+&lt;li&gt;网络性能&lt;/li&gt;
+&lt;li&gt;proposal以及本地提交性能&lt;/li&gt;
+&lt;li&gt;&amp;hellip;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h3 id=&#34;1-4-最后一点话&#34;&gt;1.4. 最后一点话&lt;/h3&gt;
+
+&lt;p&gt;像这种需要满足“大多数”的分布式集群，高可用部署是个挑战。这里的高可用其实是相对的，可以是机器隔离，可以是机柜隔离，可以是机房隔离，可以是城市隔离&amp;hellip;主要看你需要干什么，更高的&lt;code&gt;可用性&lt;/code&gt;意味着更糟糕的&lt;code&gt;性能&lt;/code&gt;，在于取舍。&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;物理机，有冗余电源，UPS等可用性保证&lt;/li&gt;
+&lt;li&gt;网络设备有&lt;code&gt;主备&lt;/code&gt;或者&lt;code&gt;双活&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;应用层面也有对应的可用性保证方法
+
+&lt;ul&gt;
+&lt;li&gt;基于一致性协议的，比如raft等&lt;/li&gt;
+&lt;li&gt;基于vip漂来漂去的keepalived等&lt;/li&gt;
+&lt;/ul&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;而现在普遍认为，跨可用区的才算真正高可用。。。应该是云宣传导致的思维定式。&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;凡事都得量力而行，辩证看待！&lt;/strong&gt;&lt;/p&gt;
+
+&lt;h4 id=&#34;1-4-1-举例&#34;&gt;1.4.1. 举例&lt;/h4&gt;
+
+&lt;p&gt;比如某A云只有A和B可用区，为了满足ETCD的高可用，非要使用某U云的A可用区作为第三个节点的部署位置，而&lt;code&gt;A--&amp;gt;C&lt;/code&gt;和&lt;code&gt;B--&amp;gt;C&lt;/code&gt;都是通过VPN打通（非专线）。&lt;/p&gt;
+
+&lt;p&gt;想法是不错，三个用区，三实例，挂一个机房都不会影响集群状态。可是毕竟经过了公网，集群的性能完全交给了稳定性相对较差的公网。&lt;/p&gt;
+
+&lt;h2 id=&#34;2-主节点&#34;&gt;2. 主节点&lt;/h2&gt;
+
+&lt;blockquote&gt;
+&lt;p&gt;k8s的心脏，大脑，负责与etcd存储通信，负责控制与调度，主节点单独部署，不作为Master节点。&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;一大堆参数，添加就好了，为了方便维护，使用systemd启动，日志落地文件，滚动管理。&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;apiserver通过负载均衡暴露&lt;/li&gt;
+&lt;li&gt;apiserver一定要把localhost签到证书中，方便本地调用&lt;/li&gt;
+&lt;li&gt;controller-manager以及scheduler直连本地apiserver地址（通过负载均衡连接会影响&lt;code&gt;leader-elect&lt;/code&gt;）&lt;/li&gt;
+&lt;li&gt;controller-manager的参数较多，需要按照实际情况配置
+
+&lt;ul&gt;
+&lt;li&gt;几台算large-size，（节点数小于large-size，切可用区unhealthy，那么驱逐速度将为0！！）&lt;/li&gt;
+&lt;li&gt;多可用区部署时，不可能节点超过多少就认为可用区unhealthy&lt;/li&gt;
+&lt;li&gt;pod驱逐超时设置为多少？（默认5分钟）&lt;/li&gt;
+&lt;li&gt;一级驱节点逐速率是多少&lt;/li&gt;
+&lt;li&gt;二级驱节点逐速率是多少&lt;/li&gt;
+&lt;/ul&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&#34;3-工作节点&#34;&gt;3. 工作节点&lt;/h2&gt;
+
+&lt;blockquote&gt;
+&lt;p&gt;真正负载所在地，涉及配置包括docker、kubelet、kube-proxy。kube-proxy基本不动，基本就是前两者的配置。&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;h3 id=&#34;3-1-docker&#34;&gt;3.1. docker&lt;/h3&gt;
+
+&lt;blockquote&gt;
+&lt;p&gt;容器相关的配置，版本当然越高越好啦，只要兼容CRI即可。&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;ul&gt;
+&lt;li&gt;控制台日志大小限制&lt;/li&gt;
+&lt;li&gt;关闭iptables&lt;/li&gt;
+&lt;li&gt;设置网桥IP，防止与其他网段冲突&lt;/li&gt;
+&lt;li&gt;关闭NAT，需要出网单独配置&lt;/li&gt;
+&lt;li&gt;开启live-reload功能，方便docker维护&lt;/li&gt;
+&lt;li&gt;稍微加大push&amp;amp;pull进行并发量&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h3 id=&#34;3-2-kubelet&#34;&gt;3.2. kubelet&lt;/h3&gt;
+
+&lt;blockquote&gt;
+&lt;p&gt;这个参数就比较多了，日志规范好，预留资源保留好，docker对应的资源管理好即可&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;ul&gt;
+&lt;li&gt;自动清理imagefs的上下限&lt;/li&gt;
+&lt;li&gt;系统保留内存/CPU的量以及kube保留量&lt;/li&gt;
+&lt;li&gt;日志相关&lt;/li&gt;
+&lt;li&gt;节点标签&lt;/li&gt;
+&lt;/ul&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>k8s内置scheduler算法[译]</title>
+      <link>https://ermazi.com/2019/k8s%E5%86%85%E7%BD%AEscheduler%E7%AE%97%E6%B3%95/</link>
+      <pubDate>Sat, 16 Mar 2019 10:58:22 +0800</pubDate>
+      
+      <guid>https://ermazi.com/2019/k8s%E5%86%85%E7%BD%AEscheduler%E7%AE%97%E6%B3%95/</guid>
+      <description>
+
+&lt;h1 id=&#34;k8s中的调度算法&#34;&gt;k8s中的调度算法&lt;/h1&gt;
+
+&lt;p&gt;k8s调度器根据一组规则去调度未分配Pod到相应的节点上，包括两个阶段，第一个阶段是过滤节点；第二个阶段是寻找最佳节点。[1][k8s调度器算法文档]&lt;/p&gt;
+
+&lt;h2 id=&#34;过滤节点&#34;&gt;过滤节点&lt;/h2&gt;
+
+&lt;p&gt;The purpose of filtering the nodes is to filter out the nodes that do not meet certain requirements of the Pod. For example, if the free resource on a node (measured by the capacity minus the sum of the resource requests of all the Pods that already run on the node) is less than the Pod&amp;rsquo;s required resource, the node should not be considered in the ranking phase so it is filtered out. Currently, there are several &amp;ldquo;predicates&amp;rdquo; implementing different filtering policies, including:&lt;/p&gt;
+
+&lt;p&gt;过滤节点的目的就是去掉那些不满足特定条件的节点，比如资源不足，那么这个节点将直接被过滤掉，不会进入优选阶段。目前，预选策略包括：&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;NoDiskConflict&lt;/code&gt;: 评估存储卷是否满足条件，并且是否已经挂载。只有支持类型的PVC才会被检测，不会检测直接挂载到pod的存储卷。&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;NoVolumeZoneConflict&lt;/code&gt;: 评估存储卷是否满足可用区限制&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;PodFitsResources&lt;/code&gt;: 检测CPU和内存是否满足Pod的要求，空闲资源是使用节点资源总量减去节点上所有Pod的请求值之和。&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;PodFitsHostPorts&lt;/code&gt;: 检测是否存在主机端口冲突&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;HostName&lt;/code&gt;: 根据NodeName字段过滤掉其他所有节点&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;MatchNodeSelector&lt;/code&gt;: 检测节点标签是否满足&lt;code&gt;nodeSelector&lt;/code&gt;字段，并且同时满足&lt;code&gt;nodeAffinity&lt;/code&gt;字段&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;MaxEBSVolumeCount&lt;/code&gt;: 检测单个实例挂载的EBS盘数量是否超出最大值&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;MaxGCEPDVolumeCount&lt;/code&gt;: 检测单个实例挂载的GCP盘数量是否超出最大值&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;CheckNodeMemoryPressure&lt;/code&gt;: 检测节点是否有内存压力&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;CheckNodeDiskPressure&lt;/code&gt;: 检测内存是否有磁盘压力&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&#34;节点打分&#34;&gt;节点打分&lt;/h2&gt;
+
+&lt;p&gt;通过第一节点过滤出来的节点可以安放Pod，而且通常有多个节点满足条件。k8s会通过优选来找到一个最合适的节点安放Pod，这通过一系列优先级函数集合实现。对于每个节点，每一个优先级函数都会给它打分，满分10分，10分代表最佳匹配，0代表不匹配。另外每个优先级函数都会有一个权重，最终的结果就是将所有权重分求和。举个例子，假设有两个优先级函数:&lt;code&gt;priorityFunc1&lt;/code&gt;和&lt;code&gt;priorityFunc2&lt;/code&gt;，他们的权重分别是&lt;code&gt;weight1&lt;/code&gt;和&lt;code&gt;weight2&lt;/code&gt;，那么节点&lt;code&gt;NodeA&lt;/code&gt;的分数就是：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;finalScoreNodeA = (weight1 * priorityFunc1) + (weight2 * priorityFunc2)
 &lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;计算所有节点的分数，分数最高的那个Pod当选，如果有分数相同者，随便选个即可。&lt;/p&gt;
+
+&lt;p&gt;Currently, Kubernetes scheduler provides some practical priority functions, including:&lt;/p&gt;
+
+&lt;p&gt;目前，k8s调度器提供一些优选函数，包括&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;LeastRequestedPriority&lt;/code&gt;: 最少已请求资源优选策略，利用&lt;code&gt;(总量-已存在Pod总请求量-待调度Pod请求量)/总量&lt;/code&gt;来计算资源空闲率，CPU和内存权重一样，结果越大，那么分数越高。&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;BalancedResourceAllocation&lt;/code&gt;: 用于平衡CPU和内存使用率&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;SelectorSpreadPriority&lt;/code&gt;: 扩展选择优先级算法，尽可能避免属于相同服务、相同rc/rs的pod在同一个节点，如果zone信息存在的话，也会尽可能分散在不同的可用区&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;CalculateAntiAffinityPriority&lt;/code&gt;: 反亲和性优先级调度算法，根据标签，尽可能避免特定标签Pod在相同节点上。&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;ImageLocalityPriority&lt;/code&gt;: 根据节点上是否已有镜像以及已有镜像大小来进行优先级调度&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;NodeAffinityPriority&lt;/code&gt;: (Kubernetes v1.2) 实现&lt;code&gt;preferredDuringSchedulingIgnoredDuringExecution&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;优先级函数可以在 &lt;a href=&#34;http://releases.k8s.io/HEAD/pkg/scheduler/algorithm/priorities/&#34; rel=&#34;nofollow noreferrer&#34; target=&#34;_blank&#34;&gt;pkg/scheduler/algorithm/priorities&lt;/a&gt;查看具体实现, k8s默认使用了其中部分调度器，你可以查看&lt;a href=&#34;http://releases.k8s.io/HEAD/pkg/scheduler/algorithmprovider/defaults/defaults.go&#34; rel=&#34;nofollow noreferrer&#34; target=&#34;_blank&#34;&gt;pkg/scheduler/algorithmprovider/defaults/defaults.go&lt;/a&gt;.&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>UCloud使用体验</title>
+      <link>https://ermazi.com/2019/ucloud%E4%BD%BF%E7%94%A8%E4%BD%93%E9%AA%8C%E6%8A%A5%E5%91%8A/</link>
+      <pubDate>Fri, 15 Mar 2019 01:40:22 +0800</pubDate>
+      
+      <guid>https://ermazi.com/2019/ucloud%E4%BD%BF%E7%94%A8%E4%BD%93%E9%AA%8C%E6%8A%A5%E5%91%8A/</guid>
+      <description>
+
+&lt;blockquote&gt;
+&lt;p&gt;ucloud体验一周，惊喜与惊吓不断&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;## 1. 不说产品&lt;/p&gt;
+
+&lt;h3 id=&#34;1-1-uhost&#34;&gt;1.1. UHost&lt;/h3&gt;
+
+&lt;p&gt;让我印象最深的就是定价，所谓的按量，就是&lt;code&gt;按小时&lt;/code&gt;收费，对于包月收费分为两种:&lt;code&gt;到月末&lt;/code&gt;以及&lt;code&gt;包月&lt;/code&gt;，据说是7天之内随意退，已使用部分按照已使用小时按月平均收费，也就是说，如果你使用七天内，千万别开按量，直接按月。&lt;/p&gt;
+
+&lt;p&gt;另一个亮点算是备注吧，可以写点extra信息，UHost标签系统单一，只支持一个&lt;code&gt;Tag&lt;/code&gt;，并且叫做&lt;code&gt;业务组&lt;/code&gt;，只有值，无键。&lt;/p&gt;
+
+&lt;p&gt;UCloud的网络定制化很弱，能建立VPC，子网，但是三层无法添加路由，也就是说，你如果在一个VPC中划分多子网，并且部署了VPN等网关设备和办公室或者其他IDC打通，那么想要路由特定流量，就需要在所有UHost中配置路由！！是所有！！如果你想要VPC以外的地方通过VPN访问内网ULB，可是ULB配置不了回包路由啊，咋整？？？&lt;/p&gt;
+
+&lt;blockquote&gt;
+&lt;p&gt;解：牺牲源IP穿透，在VPN等网关设备添加SNAT，进行地址伪装；或者DNAT。&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;另外，UCloud的SDN网络貌似MTU值较小，只有&lt;del&gt;1390&lt;/del&gt;1454（更正）？？如果使用了类IPsec的携带额外封包，需要将MSS调小（之前以为1360够了，那是针对MTU为默认的，现在需要调整到1314以下，方可使用，不然会因为数据包无法分段，导致通信受阻）&lt;/p&gt;
+
+&lt;p&gt;&lt;code&gt;硬件隔离组&lt;/code&gt;？类似于部署级，是个好东西，用于防止多个虚拟机跑到一台物理机上，增加了可用性。IsolationGroup最多添加7台实例，猜测是为了满足&lt;code&gt;大多数理论&lt;/code&gt;而定的值，比如&lt;code&gt;zk&lt;/code&gt;、&lt;code&gt;kafka&lt;/code&gt;、&lt;code&gt;etcd&lt;/code&gt;等，但是对于无状态应用本身，需要在实例外分配&lt;code&gt;app&lt;/code&gt;，尽可能使相同应用在一个&lt;code&gt;硬件隔离组&lt;/code&gt;中。现在只是同组横向隔离，如果再整个组间隔离就更好了。在我们k8s的使用场景下，就只能按照NodeLabel创建&lt;code&gt;硬件隔离组&lt;/code&gt;了，然后使用应用反亲和进行调度了（或者可以将&lt;code&gt;硬件隔离组&lt;/code&gt;作为节点label，参与节点亲和性调度）。UK8s本身并没有考虑到硬件隔离组。&lt;/p&gt;
+
+&lt;p&gt;再说说&lt;code&gt;防火墙&lt;/code&gt;?丫的就是安全组，而他们非要称之为&lt;code&gt;外网防火墙&lt;/code&gt;，搞笑的是，他们API的参数还是叫&lt;code&gt;SecurityGroup&lt;/code&gt;，哈哈哈。这个就比较坑了，UCloud产品脑袋绝对有坑，原因有3:&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;每个实例必须且只能绑定一个&lt;code&gt;防火墙&lt;/code&gt;。&lt;/li&gt;
+&lt;li&gt;想要放开所谓的&amp;rdquo;全部&amp;rdquo;，就得将&lt;code&gt;全部TCP&lt;/code&gt;，&lt;code&gt;全部UDP&lt;/code&gt;，&lt;code&gt;ICMP&lt;/code&gt;，&lt;code&gt;GRE&lt;/code&gt;规则都添加上，一共四条；产品怎么想的？增加操作复杂度，从而减少因为&lt;code&gt;放开全部&lt;/code&gt;导致的安全事故？；放开&amp;rdquo;全部&amp;rdquo;有那么难吗？&lt;/li&gt;
+&lt;li&gt;菜单栏叫&lt;code&gt;基本协议&lt;/code&gt;，里面是2中提到的4种，我想着既然有&lt;code&gt;基本协议&lt;/code&gt;，就应该有&lt;code&gt;非基本协议&lt;/code&gt;吧？找了半天，然而，失望了，并没有。那么遇到&lt;code&gt;非基本协议&lt;/code&gt;咋整？&lt;code&gt;解:抱歉我们的产品已经满足了大多数用户的需求，你们这种小众需求，我们无法支持&lt;/code&gt;&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;不过至少有一点是可以的：&lt;/p&gt;
+
+&lt;blockquote&gt;
+&lt;p&gt;&lt;del&gt;他们同一个&lt;code&gt;外网防火墙&lt;/code&gt;可以跨VPC复用，并且所有在外网防火墙内的UHost均可畅通无阻。&lt;/del&gt;最新了解：ucloud的外网防火墙仅仅针对EIP有效，内网无效！！！震惊！！！所以Ucloud的VPC内部无任何访问限制~~&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;这也是我为啥妥协的原因，在不需要接入非同一VPC机器作为k8s节点的情况下，是能满足需求的。&lt;/p&gt;
+
+&lt;p&gt;啥玩意儿？为啥？你在说啥？&lt;/p&gt;
+
+&lt;p&gt;笔者使用calico插件，使用&lt;code&gt;CrossSubnet&lt;/code&gt;模式，对于同一子网，走路由；跨子网，走&lt;code&gt;ipip隧道&lt;/code&gt;，而ipip协议不包含它防火墙所定义的基本协议中，自然就无法放行了。sao！&lt;/p&gt;
+
+&lt;p&gt;再说说&lt;code&gt;UHost&lt;/code&gt;本身吧， 两种特性：&lt;code&gt;网络增强&lt;/code&gt;和&lt;code&gt;高磁盘IO&lt;/code&gt;型，前者高包转发率，后者无限制SSD本地磁盘。&lt;code&gt;网络增强型&lt;/code&gt;必须&lt;code&gt;CPU&amp;gt;4&lt;/code&gt;；&lt;code&gt;高IO型&lt;/code&gt;必须外挂本地数据盘。&lt;/p&gt;
+
+&lt;p&gt;UHost不支持metadata，不支持cloudinit。本地磁盘类型系统盘，默认镜像系统盘大小，只能增加，不能减少，本地盘扩缩容需要重启实例，名曰&lt;code&gt;改配&lt;/code&gt;，费时。&lt;/p&gt;
+
+&lt;p&gt;API接口简陋，文档非同步最新，比如隔离组参数，API文档中都没有。&lt;/p&gt;
+
+&lt;p&gt;SDK基本没啥人用，比如Go的ucloud-go-sdk才36个star，估计还都是自己人点的，sdk的风格基本抄的aws，所以用起来还算顺手，不过描述与行为不符，缺乏单元测试。&lt;/p&gt;
+
+&lt;p&gt;问题来了，既然不支持metadata，当你在UHost中迷路，想知道自己是谁怎么办呢？又没有与生俱来的metadata，也没有哪里注入了UHost相关的信息？&lt;/p&gt;
+
+&lt;blockquote&gt;
+&lt;p&gt;解：唯一办法，开只读权限secret，先获取本实例私有IP，然后调用APi，DescribeInstance，翻页遍历，条件: PrivateIp == IP，他们的查询实例信息，并不支持Filter参数，所以只能将数据Load到本地，然后比对过滤。（使用goroutine，分别取，只要有一个满足即退出，用race这种方式，应该能优化不少时间，当然是在实例很多的情况下）&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;别问我怎么知道的，我也想尽了各种办法，只有这一条路可走，最终用go写了个&lt;code&gt;metadataq&lt;/code&gt;的工具，用于模拟metadata信息查询，每次查询得2秒以上，具体还得依赖于地区，网络等（ucloud全球api只有一个入口！！！）后来跟k8s小组的人聊，他们也是这么获取UHostID等metadata的，然后再申请各种k8s需要的资源，比如UDisk，比如ULB，真心苦了这帮开发了。&lt;/p&gt;
+
+&lt;p&gt;UHost就说这么多吧，像前端UI的坑啊，API和UI信息不一致的坑啊，像高磁盘IO实例UI限制必须挂载本地数据盘然而创建完可删的逻辑错误啊，再比如删除本地磁盘并没有删除/etc/fstab相关条目导致实例无法启动的白痴型BUG啊，再再比如控制台登录没法复制的体验问题啊，再再再比如做镜像必须关机，镜像与快照无关等等等问题，我就不一一吐槽了。&lt;/p&gt;
+
+&lt;h3 id=&#34;1-2-ulb&#34;&gt;1.2. ULB&lt;/h3&gt;
+
+&lt;blockquote&gt;
+&lt;p&gt;用过最难用的负载均衡之一，看其配置，能勾起当初与大拿详聊&lt;code&gt;LVS-DR&lt;/code&gt;模式的回忆。&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;首先UCloud的ULB使用的使他们基于DPDK自研的类LVS-DR模式的负载均衡。&lt;/p&gt;
+
+&lt;p&gt;这措辞，一点没问题，DPDK是工具包，类LVS-DR，只是参照，最终还是自己研发的。&lt;/p&gt;
+
+&lt;p&gt;反正别管那么多，你当LVS-DR模式看待就行了，原理机制一模一样，哈哈哈。&lt;/p&gt;
+
+&lt;p&gt;DR模式包流转过程：包进LVS，修改其MAC地址为RS节点MAC，然后重新丢回进行二层转发，到达RS节点后，由于lo绑定了VIP与LVS入口IP一样，包合法，in，处理，封包出去，源地址为VIP，目标地址为客户端IP，直接发送给客户端。&lt;/p&gt;
+
+&lt;p&gt;如果用&lt;code&gt;LVS-DR&lt;/code&gt;模式做四层负载均衡，会有什么特点呢？（不考虑性能，性能自然是杠杠的，不过大多数场景无益）&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;LVS本身不涉及端口，不代理，只做mac修改包转发，也就意味着监听端口与RS监听端口必须一致；如果不一致，需要在RS节点使用iptables处理，在PREROUTING链进行端口转发，不过不易于维护。&lt;/li&gt;
+&lt;li&gt;RS本身可以通过ULB访问自己哟，无需使用俩代理做跳板（算个特点）&lt;/li&gt;
+&lt;li&gt;除了ULB控制台点点点，RS节点需要额外添加网卡信息，如果RS节点作为多ULB后端，需要绑定多个别名回环口网卡&lt;/li&gt;
+&lt;li&gt;存在本地限制，凡是后端RS节点访问ULB，会直接本地处理，一旦该RS对应的服务出现异常，那么另外N-1个RS也无法提供给该RS服务&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;ULB看样子更专注外网，外网支持HTTP/TCP/UDP，而TCP既支持类DR的包转发模式，也支持代理模式（Haproxy实现）；而可怜的内网，只支持包转发模式。&lt;/p&gt;
+
+&lt;h3 id=&#34;1-3-uk8s&#34;&gt;1.3. UK8s&lt;/h3&gt;
+
+&lt;blockquote&gt;
+&lt;p&gt;简单说说吧，毕竟还是聊得挺愉快的&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;算是公测新产品吧，貌似做k8s的团队没多少人，据观察，按条罗列吧&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;所有k8s组件使用hyperkube混合工具启动&lt;/li&gt;
+&lt;li&gt;master独立，只包含etcd、k8s三大组件以及uk8s-controller（ucloud cloud controller），不包括节点组件kubelet以及kube-proxy，不作为master节点&lt;/li&gt;
+&lt;li&gt;网络这块，他们本身就是SDN，自研cni，做到UHostIP与PodIP同网段也不算太难，看样子应该没有支持NetworkPolicy&lt;/li&gt;
+&lt;li&gt;存储这块，跟aliyun类似，使用flexvolume，调用自研工具跟UDisk联动&lt;/li&gt;
+&lt;li&gt;LoadBalancer模式与ULB联动，3,4,5的控制部分都在uk8s-controller中&lt;/li&gt;
+&lt;li&gt;提供kubectl的控制台，用于命令行操作&lt;/li&gt;
+&lt;li&gt;Uk8s管理界面比较简单，就是将各种资源分tag罗列&lt;/li&gt;
+&lt;li&gt;Docker这块应用不知是否做定制，配置这块关闭iptables，禁用默认bridge，使用overlay2等，这会导致DIND模式无法访问网络&lt;/li&gt;
+&lt;li&gt;部分参数无效，但无妨&lt;/li&gt;
+&lt;li&gt;版本很新，已经v1.13.1+不过关键特性，并没有跟云支持的很好，比如VolumeSchedule&lt;/li&gt;
+&lt;li&gt;没有考虑硬件隔离组&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;总体感觉：干净。&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;这既是优点也是缺点，它不涉及太多资源，只是帮你起了一套k8s集群，剩下的都是你的舞台；不过啥都没，依赖于使用者对k8s的应用能力。&lt;/strong&gt;&lt;/p&gt;
+
+&lt;h2 id=&#34;2-说问题&#34;&gt;2. 说问题&lt;/h2&gt;
+
+&lt;h3 id=&#34;2-1-通过ulb无法访问kubernetes-dashboard&#34;&gt;2.1. 通过ULB无法访问kubernetes-dashboard&lt;/h3&gt;
+
+&lt;p&gt;解：访问路径:&lt;code&gt;ULB&lt;/code&gt;&amp;ndash;lvs&amp;ndash;&amp;gt;&lt;code&gt;traefik&lt;/code&gt;&amp;ndash;ipip-tunnel&amp;ndash;&amp;gt;&lt;code&gt;kubernetes-dashboard&lt;/code&gt;对应的&lt;code&gt;Pod&lt;/code&gt;。&lt;/p&gt;
+
+&lt;p&gt;经过抓包，最终定位到问题出现在ipip-tunnel上。如果ip包过大，就无法经由ipip-tunnel。&lt;/p&gt;
+
+&lt;p&gt;经查看，Ucloud的MTU调整过，全网统一为1454，而calico网卡的mtu默认为1500，ipip-tunnel的mtu为1440。&lt;code&gt;1440 + 20 &amp;gt; 1454&lt;/code&gt;，导致响应包回不来（部分包能回来，要么是小包，比如ping包才56，要么是携带P标志）。&lt;/p&gt;
+
+&lt;p&gt;最终解决方法参考&lt;a href=&#34;https://docs.projectcalico.org/v3.5/usage/configuration/mtu&#34; rel=&#34;nofollow noreferrer&#34; target=&#34;_blank&#34;&gt;calico配置mtu&lt;/a&gt;数据，ucloud为1454，那么calico网卡也设置为1454，ipip设置为1434即可完美解决，对应的配置为：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;# cni配置文件
+{
+    ...
+    &amp;quot;mtu&amp;quot;: 1454,
+    ...
+}
+# IPIP TUNNEL配置
+## 设置calico/node的环境变量
+FELIX_IPINIPMTU=1434
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;ucloud这该死的mtu~~，折腾人&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>谈谈在阿里云自建k8s集群</title>
+      <link>https://ermazi.com/2019/%E8%B0%88%E8%B0%88%E5%9C%A8%E9%98%BF%E9%87%8C%E4%BA%91%E8%87%AA%E5%BB%BAk8s%E9%9B%86%E7%BE%A4/</link>
+      <pubDate>Sun, 10 Mar 2019 01:40:34 +0800</pubDate>
+      
+      <guid>https://ermazi.com/2019/%E8%B0%88%E8%B0%88%E5%9C%A8%E9%98%BF%E9%87%8C%E4%BA%91%E8%87%AA%E5%BB%BAk8s%E9%9B%86%E7%BE%A4/</guid>
+      <description>
+
+&lt;blockquote&gt;
+&lt;p&gt;我只是一名小小的运维，追求的是够用，极简，稳定，源码最多用于排查问题，二次开发基本是不够格的，据观察大多数人也处于我这个层级（大神忽略此条）。&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;&lt;strong&gt;有人问：阿里云不是提供现成的k8s集群吗，为啥还要自建？吃饱了撑？&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;非也非也，单纯说好与不好都是耍流氓，应由利弊权衡之：&lt;/p&gt;
+
+&lt;p&gt;先说利:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;阿里云容器团队精心打磨，bug修复，功能改进&lt;/li&gt;
+&lt;li&gt;为k8s结合阿里云提供工具、服务进行粘合&lt;/li&gt;
+&lt;li&gt;提供一键滚动升级k8s版本&lt;/li&gt;
+&lt;li&gt;提供VPC级别的网络插件&lt;/li&gt;
+&lt;li&gt;提供&lt;code&gt;aliyun-cloud-controller&lt;/code&gt;，能够很好的结合阿里云资源，比如&lt;code&gt;vpc&lt;/code&gt;，&lt;code&gt;路由表&lt;/code&gt;、&lt;code&gt;SLB&lt;/code&gt;等&lt;/li&gt;
+&lt;li&gt;提供&lt;code&gt;aliyun-disk-controller&lt;/code&gt;，能够直接挂载云存储(&lt;code&gt;flexvolume&lt;/code&gt;)&lt;/li&gt;
+&lt;li&gt;开发了个&lt;code&gt;application&lt;/code&gt;的服务，能够管理部分资源的发布，比如&lt;code&gt;蓝绿部署&lt;/code&gt;等&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;再说弊:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;早期功能少，界面丑陋，设计不合理&lt;/li&gt;
+&lt;li&gt;比如40个节点的限制（因为路由条目最多加40条？笑）&lt;/li&gt;
+&lt;li&gt;比如默认外网暴露apiserver（10.12修复的bug忘了？好歹给个选项啊）&lt;/li&gt;
+&lt;li&gt;早期功能体验贼差，比如利用控制台无法添加节点（怀疑是自动化流程bug），只能先自己先创建ecs实例，然后作为节点添加&lt;/li&gt;
+&lt;li&gt;早期不支持network-policy（什么现在支持了？杠精滚粗，当时就直接拿flannel，开发了个支持vpc的backend就作为产品了，即使是现在的terway，也是flannel+calico-policy的组合版本）&lt;/li&gt;
+&lt;li&gt;早期默认内置nginx-ingress，这就觉得有点考虑得太多了点了，属于溺爱了。&lt;/li&gt;
+&lt;li&gt;还有个诟病的，就是直接将kubernetes-dashboard直接硬生生地嵌入了阿里云容器管理后台，最最最关键的是，把最重要的全局搜索框给干掉了，偷笑:D&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;&lt;strong&gt;笔者胡说，这些有的已经不是这样子了，臭杠精，没看到是早期啊，18年5月份之前！！&lt;/strong&gt;&lt;/p&gt;
+
+&lt;blockquote&gt;
+&lt;p&gt;阿里云还有个恶心的就是，啥玩意儿都只开源第一版，就是最初的一版，应该是为了应付开源精神以及开源协议的，后面的代码都只在企业内部更新迭代。&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;h2 id=&#34;开始考虑如何自建吧-无详细步骤-只谈可行性&#34;&gt;开始考虑如何自建吧（无详细步骤，只谈可行性）&lt;/h2&gt;
+
+&lt;p&gt;参考kubeadm，先用kubeadm整一版，然后研究其参数配置，将用得着的剥离出来，然后再参考绝世好文&lt;code&gt;kubernetes the hard way&lt;/code&gt;，一步步来罗，简单的一比。&lt;/p&gt;
+
+&lt;h2 id=&#34;谈谈和阿里云结合&#34;&gt;谈谈和阿里云结合&lt;/h2&gt;
+
+&lt;p&gt;首先最重要的就是节点名称，你必须使用&lt;code&gt;&amp;lt;region-id&amp;gt;.&amp;lt;instance-id&amp;gt;&lt;/code&gt;的格式去override，去扒阿里云&lt;code&gt;aliyun-disk-controller&lt;/code&gt;创世版本，挂载磁盘至实例，都是直接读取的节点名称，然后调用阿里云api挂载的(不知道是不是写存储插件的开发脑子有坑，这么死板)，然后就去找个可用的阿里云存储插件镜像，阿里云文档中有个1.9.7可用，另外可以直接开个最新的容器服务，看最新的镜像tag。&lt;/p&gt;
+
+&lt;p&gt;存储有了，再说说网络，可以使用flannel的阿里云backend插件，直接用上阿里云网络资源，但是受限于iptables的条目！！40条！！ 也可以使用calico，不过你只能用上ipip模式，更高性能的三层模式，由于阿里云实例之间无法直接路由无法启用，对于aws来说，关闭src/dst检测包过滤，可以使用三层模式。&lt;/p&gt;
+
+&lt;blockquote&gt;
+&lt;p&gt;杠精：那不行，&lt;code&gt;ipip overlay network&lt;/code&gt;，性能不行，单队列，延迟变大了，影响应用~~ 笔者：我去你****，社区文章看多了吧，谁不想使用三层模式，阿里云限制啊。再说，在网络性能足够好的条件下，又能有多少影响呢？与其在这里抠这性能，不如花点心思改变一下调用链路，优化应用啊 。等你应用优化到极致，再吹毛求疵吧。&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;DNS么直接用&lt;code&gt;CoreDNS&lt;/code&gt;，性能杠杠的，可扩展，另外有插件可以自动扩展，这类服务属于重中之重之特重要服务，请单独调度到独立节点运行。然后forward到&lt;code&gt;PowerDNS&lt;/code&gt;，&lt;code&gt;PowerDNS&lt;/code&gt;在forward到阿里云100.100的DNS。&lt;/p&gt;
+
+&lt;p&gt;网络说完了，说说服务暴露吧，Service资源有种类型是LoadBalancer，一般云厂商都会将其与自家的负载均衡产品结合，一旦监听到该类型资源，就创建/修改对应的负载均衡配置。在实际使用中，这种方式并不是太紧迫，我们可以workaround，使用NodePort，也可以在k8s集群内部增加四层负载均衡，反代之，然后在边缘节点暴露服务，然后监测变化，挑选固定且未占用端口，将其挂载到SLB上对外。对于http类型的，这就比较好办了，毕竟应用层有信息进行路由，我们使用traefik作为ingress-controller，调度至边缘节点，使用label或者ingress/class区分对内，对外，用途等，然后使用几个固定的四层SLB反代之。（社区已经有CRD版本的ingress，替代官方默认的ingress，既可以暴露四层，又可以暴露七层，自行搜索）&lt;/p&gt;
+
+&lt;p&gt;其实现在差不多就能用了，RAM该有的权限给上，多可用区么也支持，无状态的可直接使用，有状态的依赖于volume，而阿里云最新的disk-controller也已经支持了存储卷调度VolumeSchedule。&lt;/p&gt;
+
+&lt;p&gt;监控啥的，使用&lt;code&gt;prometheus&lt;/code&gt;+&lt;code&gt;thanos&lt;/code&gt;+&lt;code&gt;kube-state-metrics&lt;/code&gt;即可，如果需要&lt;code&gt;水平扩容HPA&lt;/code&gt;么，再增加个&lt;code&gt;metrics-server&lt;/code&gt;（兼容heapster）&lt;/p&gt;
+
+&lt;p&gt;docker仓库么，使用harbor，k8s上部署也有现成的helm chart，稍微改改也能用，另外，新版harbor也支持helm chart repository了哟，基本N个部门组，再来一个base镜像组，外加一个翻墙组(万恶的GFW)，多区域么，就同步几个基础组。&lt;/p&gt;
+
+&lt;p&gt;k8s资源编排工具么，那就用helm罗，其实笔者更喜欢谷歌自家的ksonnet，带环境概念，更加富有层次，复用程度也更高，不过需要额外学一门DSL，它叫jsonnet。&lt;/p&gt;
+
+&lt;p&gt;再说&lt;code&gt;CI/CD&lt;/code&gt;流程？&lt;/p&gt;
+
+&lt;p&gt;CI这块使用&lt;code&gt;jenkins&lt;/code&gt;罗，只使用&lt;code&gt;Jenkinsfile&lt;/code&gt;编写，基于&lt;code&gt;gitops&lt;/code&gt;理念。&lt;/p&gt;
+
+&lt;p&gt;CD这块么，使用&lt;code&gt;argocd&lt;/code&gt;工具，也是基于&lt;code&gt;gitops&lt;/code&gt;的。&lt;/p&gt;
+
+&lt;p&gt;开发调试么，能力有限，只能使用&lt;code&gt;openvpn&lt;/code&gt;连入k8s集群内部罗，如果你使用阿里云产品，那么可以直接访问&lt;code&gt;pod ip&lt;/code&gt;，确实方便。&lt;/p&gt;
+
+&lt;p&gt;好了，先说到这里了。&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Go语言实战之项目说明</title>
+      <link>https://ermazi.com/2019/go%E8%AF%AD%E8%A8%80%E5%AE%9E%E6%88%98%E4%B9%8B%E9%A1%B9%E7%9B%AE%E8%AF%B4%E6%98%8E/</link>
+      <pubDate>Sun, 10 Mar 2019 01:25:22 +0800</pubDate>
+      
+      <guid>https://ermazi.com/2019/go%E8%AF%AD%E8%A8%80%E5%AE%9E%E6%88%98%E4%B9%8B%E9%A1%B9%E7%9B%AE%E8%AF%B4%E6%98%8E/</guid>
+      <description>
+
+&lt;blockquote&gt;
+&lt;p&gt;慕课网小鱼儿讲师的文章还是挺好的，能将一个知识点在实际生产中的细节讲清楚，当然，其中很多事个人习惯，比如喜欢把所有变量定义到func头部，再比如喜欢使用&lt;code&gt;goto&lt;/code&gt;语法，这些都挺好。&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;h2 id=&#34;1-项目结构&#34;&gt;1. 项目结构&lt;/h2&gt;
+
+&lt;p&gt;项目按照功能分，或者说程序的入口。公用的一些资源定义放到&lt;code&gt;common&lt;/code&gt;包中，在项目中尽可能使用Golang原生的一些包，比如&lt;code&gt;net/http&lt;/code&gt;,&lt;code&gt;flag&lt;/code&gt;,&lt;code&gt;command&lt;/code&gt;等。&lt;/p&gt;
+
+&lt;p&gt;配置这块提出来，使用json格式文件，然后&lt;code&gt;initConfig&lt;/code&gt;启动时加载，在编写配置项的时候，使用无用字段进行配置说明:D，这个有点想法。。。&lt;/p&gt;
+
+&lt;p&gt;对于需要全局使用的资源，使用G_xxx定义包级别的变量，方便全局使用。&lt;/p&gt;
+
+&lt;h2 id=&#34;2-项目组成部分&#34;&gt;2. 项目组成部分&lt;/h2&gt;
 </description>
     </item>
     

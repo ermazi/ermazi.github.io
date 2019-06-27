@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+  <meta http-equiv="content-type" content="text/html;charset=utf-8">
+  <meta http-equiv="X-UA-Compatible" content="chrome=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noodp"/>
+  
+  
+  
+  
+  
+  <link rel="prev" href="https://ermazi.com/2019/ucloud%E4%BD%BF%E7%94%A8%E4%BD%93%E9%AA%8C%E6%8A%A5%E5%91%8A/" />
+  <link rel="next" href="https://ermazi.com/2019/%E5%85%B3%E4%BA%8Ek8s%E5%AE%9E%E6%88%98%E7%9A%84%E5%B0%8F%E6%8A%80%E5%B7%A7/" />
+  <link rel="canonical" href="https://ermazi.com/2019/k8s%E5%86%85%E7%BD%AEscheduler%E7%AE%97%E6%B3%95/" />
+  <link rel='shortcut icon' type='image/x-icon' href='/favicon.ico' />
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+  <meta name="msapplication-TileColor" content="#da532c">
+  <meta name="theme-color" content="#ffffff">
+  <title>
+       
+       
+           k8s内置scheduler算法[译] | 二麻运维
+       
+  </title>
+  <meta name="title" content="k8s内置scheduler算法[译] | 二麻运维">
+    
+  
+  <link rel="stylesheet" href="/font/iconfont.css">
+  <link rel="stylesheet" href="/css/main.min.css">
+
+
+  <meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="k8s内置scheduler算法[译]"/>
+<meta name="twitter:description" content="k8s中的调度算法 k8s调度器根据一组规则去调度未分配Pod到相应的节点上，包括两个阶段，第一个阶段是过滤节点；第二个阶段是寻找最佳节点。[1][k8s调度器算法文档]
+过滤节点 The purpose of filtering the nodes is to filter out the nodes that do not meet certain requirements of the Pod. For example, if the free resource on a node (measured by the capacity minus the sum of the resource requests of all the Pods that already run on the node) is less than the Pod&rsquo;s required resource, the node should not be considered in the ranking phase so it is filtered out."/>
+
+  <script type="application/ld+json">
+{
+  "@context": "http://schema.org",
+  "@type": "BlogPosting",
+  "headline": "k8s内置scheduler算法[译]",
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https:\/\/ermazi.com\/2019\/k8s%E5%86%85%E7%BD%AEscheduler%E7%AE%97%E6%B3%95\/"
+  },
+  "image": {
+    "@type": "ImageObject",
+    "url": "https:\/\/ermazi.com\/cover.png",
+    "width":  800 ,
+    "height":  600 
+  },
+  "genre": "posts",
+  "keywords": "k8s",
+  "wordcount":  146 ,
+  "url": "https:\/\/ermazi.com\/2019\/k8s%E5%86%85%E7%BD%AEscheduler%E7%AE%97%E6%B3%95\/",
+  "datePublished": "2019-03-16T10:58:22\x2b08:00",
+  "dateModified": "2019-03-16T10:58:22\x2b08:00",
+  
+  "publisher": {
+    "@type": "Organization",
+    "name": "ermazi",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https:\/\/ermazi.com\/logo.png",
+      "width":  127 ,
+      "height":  40 
+    }
+  },
+  "author": {
+    "@type": "Person",
+    "name": "ermazi"
+  },
+  "description": ""
+}
+</script>
+</head>
+
+  
+
+
+
+  <body class="">
+    <div class="wrapper">
+        <nav class="navbar">
+    <div class="container">
+        <div class="navbar-header header-logo">
+        	<a href="https://ermazi.com">二麻运维</a>
+        </div>
+        <div class="menu navbar-right">
+                
+                
+                <a class="menu-item" href="/posts/" title="">Blog</a>
+                
+                <a class="menu-item" href="/categories/" title="">Categories</a>
+                
+                <a class="menu-item" href="/about" title="">About</a>
+                
+                <a href="javascript:void(0);" class="theme-switch"><i class="iconfont icon-sun"></i></a>&nbsp;
+        </div>
+    </div>
+</nav>
+<nav class="navbar-mobile" id="nav-mobile" style="display: none">
+     <div class="container">
+        <div class="navbar-header">
+            <div>  <a href="javascript:void(0);" class="theme-switch"><i class="iconfont icon-sun"></i></a>&nbsp;<a href="https://ermazi.com">二麻运维</a></div>
+            <div class="menu-toggle">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+     
+          <div class="menu" id="mobile-menu">
+                
+                
+                <a class="menu-item" href="/posts/" title="">Blog</a>
+                
+                <a class="menu-item" href="/categories/" title="">Categories</a>
+                
+                <a class="menu-item" href="/about" title="">About</a>
+                
+        </div>
+    </div>
+</nav>
+
+    	 <main class="main">
+          <div class="container">
+      		
+<article class="post-warp">
+    <header class="post-header">
+        <h1 class="post-title">k8s内置scheduler算法[译]</h1>
+        <div class="post-meta">
+            Written by <a href="https://ermazi.com" rel="author">ermazi</a> with ♥ 
+                <span class="post-time">
+                    on <time datetime=2019-03-16 >16 March 2019</time>
+                </span>
+                in
+                
+                <i class="iconfont icon-timer"></i>
+                1 min
+        </div>
+    </header>
+    <div class="post-content">
+        
+
+        
+
+        
+        
+     
+          
+          
+          
+
+          
+          
+          
+
+          
+
+<h1 id="k8s中的调度算法">k8s中的调度算法</h1>
+
+<p>k8s调度器根据一组规则去调度未分配Pod到相应的节点上，包括两个阶段，第一个阶段是过滤节点；第二个阶段是寻找最佳节点。[1][k8s调度器算法文档]</p>
+
+<h2 id="过滤节点">过滤节点</h2>
+
+<p>The purpose of filtering the nodes is to filter out the nodes that do not meet certain requirements of the Pod. For example, if the free resource on a node (measured by the capacity minus the sum of the resource requests of all the Pods that already run on the node) is less than the Pod&rsquo;s required resource, the node should not be considered in the ranking phase so it is filtered out. Currently, there are several &ldquo;predicates&rdquo; implementing different filtering policies, including:</p>
+
+<p>过滤节点的目的就是去掉那些不满足特定条件的节点，比如资源不足，那么这个节点将直接被过滤掉，不会进入优选阶段。目前，预选策略包括：</p>
+
+<ul>
+<li><code>NoDiskConflict</code>: 评估存储卷是否满足条件，并且是否已经挂载。只有支持类型的PVC才会被检测，不会检测直接挂载到pod的存储卷。</li>
+<li><code>NoVolumeZoneConflict</code>: 评估存储卷是否满足可用区限制</li>
+<li><code>PodFitsResources</code>: 检测CPU和内存是否满足Pod的要求，空闲资源是使用节点资源总量减去节点上所有Pod的请求值之和。</li>
+<li><code>PodFitsHostPorts</code>: 检测是否存在主机端口冲突</li>
+<li><code>HostName</code>: 根据NodeName字段过滤掉其他所有节点</li>
+<li><code>MatchNodeSelector</code>: 检测节点标签是否满足<code>nodeSelector</code>字段，并且同时满足<code>nodeAffinity</code>字段</li>
+<li><code>MaxEBSVolumeCount</code>: 检测单个实例挂载的EBS盘数量是否超出最大值</li>
+<li><code>MaxGCEPDVolumeCount</code>: 检测单个实例挂载的GCP盘数量是否超出最大值</li>
+<li><code>CheckNodeMemoryPressure</code>: 检测节点是否有内存压力</li>
+<li><code>CheckNodeDiskPressure</code>: 检测内存是否有磁盘压力</li>
+</ul>
+
+<h2 id="节点打分">节点打分</h2>
+
+<p>通过第一节点过滤出来的节点可以安放Pod，而且通常有多个节点满足条件。k8s会通过优选来找到一个最合适的节点安放Pod，这通过一系列优先级函数集合实现。对于每个节点，每一个优先级函数都会给它打分，满分10分，10分代表最佳匹配，0代表不匹配。另外每个优先级函数都会有一个权重，最终的结果就是将所有权重分求和。举个例子，假设有两个优先级函数:<code>priorityFunc1</code>和<code>priorityFunc2</code>，他们的权重分别是<code>weight1</code>和<code>weight2</code>，那么节点<code>NodeA</code>的分数就是：</p>
+
+<pre><code>finalScoreNodeA = (weight1 * priorityFunc1) + (weight2 * priorityFunc2)
+</code></pre>
+
+<p>计算所有节点的分数，分数最高的那个Pod当选，如果有分数相同者，随便选个即可。</p>
+
+<p>Currently, Kubernetes scheduler provides some practical priority functions, including:</p>
+
+<p>目前，k8s调度器提供一些优选函数，包括</p>
+
+<ul>
+<li><code>LeastRequestedPriority</code>: 最少已请求资源优选策略，利用<code>(总量-已存在Pod总请求量-待调度Pod请求量)/总量</code>来计算资源空闲率，CPU和内存权重一样，结果越大，那么分数越高。</li>
+<li><code>BalancedResourceAllocation</code>: 用于平衡CPU和内存使用率</li>
+<li><code>SelectorSpreadPriority</code>: 扩展选择优先级算法，尽可能避免属于相同服务、相同rc/rs的pod在同一个节点，如果zone信息存在的话，也会尽可能分散在不同的可用区</li>
+<li><code>CalculateAntiAffinityPriority</code>: 反亲和性优先级调度算法，根据标签，尽可能避免特定标签Pod在相同节点上。</li>
+<li><code>ImageLocalityPriority</code>: 根据节点上是否已有镜像以及已有镜像大小来进行优先级调度</li>
+<li><code>NodeAffinityPriority</code>: (Kubernetes v1.2) 实现<code>preferredDuringSchedulingIgnoredDuringExecution</code></li>
+</ul>
+
+<p>优先级函数可以在 <a href="http://releases.k8s.io/HEAD/pkg/scheduler/algorithm/priorities/" rel="nofollow noreferrer" target="_blank">pkg/scheduler/algorithm/priorities</a>查看具体实现, k8s默认使用了其中部分调度器，你可以查看<a href="http://releases.k8s.io/HEAD/pkg/scheduler/algorithmprovider/defaults/defaults.go" rel="nofollow noreferrer" target="_blank">pkg/scheduler/algorithmprovider/defaults/defaults.go</a>.</p>
+
+    </div>
+
+    <div class="post-copyright">
+             
+            <p class="copyright-item">
+                <span>Author:</span>
+                <span>ermazi </span>
+                </p>
+            
+           
+            <p class="copyright-item">
+                    <span>Words:</span>
+                   <span>146</span>
+            </p>
+            
+            <p class="copyright-item">
+                
+                <span>Share:</span>
+                <span>
+
+      
+      
+      
+      
+      
+      
+      
+        <a href="//www.linkedin.com/shareArticle?url=https%3a%2f%2fermazi.com%2f2019%2fk8s%25E5%2586%2585%25E7%25BD%25AEscheduler%25E7%25AE%2597%25E6%25B3%2595%2f&amp;title=k8s%e5%86%85%e7%bd%aescheduler%e7%ae%97%e6%b3%95%5b%e8%af%91%5d" target="_blank" title="Share on LinkedIn">
+          <i class="iconfont icon-linkedin"></i>
+        </a>
+        
+      
+      
+        
+      
+        
+      
+
+          
+
+          
+
+          
+        <a href="//www.douban.com/recommend/?url=https%3a%2f%2fermazi.com%2f2019%2fk8s%25E5%2586%2585%25E7%25BD%25AEscheduler%25E7%25AE%2597%25E6%25B3%2595%2f&amp;title=k8s%e5%86%85%e7%bd%aescheduler%e7%ae%97%e6%b3%95%5b%e8%af%91%5d" target="_blank" title="Share on Douban ">
+            <i class="iconfont icon-douban"></i>
+          </a>
+          
+
+          
+        <a href="//service.weibo.com/share/share.php?url=https%3a%2f%2fermazi.com%2f2019%2fk8s%25E5%2586%2585%25E7%25BD%25AEscheduler%25E7%25AE%2597%25E6%25B3%2595%2f&amp;appkey=&amp;title=k8s%e5%86%85%e7%bd%aescheduler%e7%ae%97%e6%b3%95%5b%e8%af%91%5d" target="_blank" title="Share on Douban ">
+            <i class="iconfont icon-weibo"></i>
+          </a>
+          
+</span>
+                
+            </p>
+
+             
+            <p class="copyright-item">
+                Released under <a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a>
+            </p>
+            
+    </div>
+
+  
+    <div class="post-tags">
+        
+            <section>
+            <i class="iconfont icon-icon-tag"></i>Tag: 
+            
+            <span class="tag"><a href="https://ermazi.com/tags/k8s/">
+                    #k8s</a></span>
+            
+            </section>
+        
+        <section>
+                <a href="javascript:window.history.back();">Back</a></span> · 
+                <span><a href="https://ermazi.com">Home</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav">
+        
+        <a href="https://ermazi.com/2019/ucloud%E4%BD%BF%E7%94%A8%E4%BD%93%E9%AA%8C%E6%8A%A5%E5%91%8A/" class="prev" rel="prev" title="UCloud使用体验"><i class="iconfont icon-dajiantou"></i>&nbsp;UCloud使用体验</a>
+         
+        
+        <a href="https://ermazi.com/2019/%E5%85%B3%E4%BA%8Ek8s%E5%AE%9E%E6%88%98%E7%9A%84%E5%B0%8F%E6%8A%80%E5%B7%A7/" class="next" rel="next" title="关于k8s实战的小技巧">关于k8s实战的小技巧&nbsp;<i class="iconfont icon-xiaojiantou"></i></a>
+        
+    </div>
+
+    <div class="post-comment">
+          
+          <div id="disqus_thread"></div>
+    <script type="text/javascript">
+    (function() {
+      
+      
+      if (window.location.hostname === 'localhost') return;
+
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      var disqus_shortname = 'ermazi';
+      dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+  
+
+
+          
+    </div>
+</article>
+          </div>
+		   </main>
+      <footer class="footer">
+    <div class="copyright">
+        &copy;
+        
+        <span itemprop="copyrightYear">2012 - 2019</span>
+        
+         
+            <span class="author" itemprop="copyrightHolder"><a href="https://ermazi.com">ermazi</a> | </span>
+         
+
+		  <span>Crafted with ❤️ by <a href="https://github.com/Fastbyte01/KeepIt" target="_blank" rel="external nofollow noopener noreffer">KeepIt</a> & <a href="https://gohugo.io/" target="_blank" rel="external nofollow noopener noreffer">Hugo</a></span>
+    </div>
+</footer>
+
+
+
+
+
+
+
+
+
+
+
+
+    
+    
+    <script src="/js/vendor_no_gallery.min.js" async=""></script>
+    
+  
+
+
+
+
+
+
+
+     </div>
+  </body>
+</html>

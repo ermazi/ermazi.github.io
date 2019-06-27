@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+  <meta http-equiv="content-type" content="text/html;charset=utf-8">
+  <meta http-equiv="X-UA-Compatible" content="chrome=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noodp"/>
+  
+  
+  
+  
+  
+  <link rel="prev" href="https://ermazi.com/2019/go%E8%AF%AD%E8%A8%80%E5%AE%9E%E6%88%98%E4%B9%8B%E9%A1%B9%E7%9B%AE%E8%AF%B4%E6%98%8E/" />
+  <link rel="next" href="https://ermazi.com/2019/ucloud%E4%BD%BF%E7%94%A8%E4%BD%93%E9%AA%8C%E6%8A%A5%E5%91%8A/" />
+  <link rel="canonical" href="https://ermazi.com/2019/%E8%B0%88%E8%B0%88%E5%9C%A8%E9%98%BF%E9%87%8C%E4%BA%91%E8%87%AA%E5%BB%BAk8s%E9%9B%86%E7%BE%A4/" />
+  <link rel='shortcut icon' type='image/x-icon' href='/favicon.ico' />
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+  <meta name="msapplication-TileColor" content="#da532c">
+  <meta name="theme-color" content="#ffffff">
+  <title>
+       
+       
+           谈谈在阿里云自建k8s集群 | 二麻运维
+       
+  </title>
+  <meta name="title" content="谈谈在阿里云自建k8s集群 | 二麻运维">
+    
+  
+  <link rel="stylesheet" href="/font/iconfont.css">
+  <link rel="stylesheet" href="/css/main.min.css">
+
+
+  <meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="谈谈在阿里云自建k8s集群"/>
+<meta name="twitter:description" content="我只是一名小小的运维，追求的是够用，极简，稳定，源码最多用于排查问题，二次开发基本是不够格的，据观察大多数人也处于我这个层级（大神忽略此条）。
+ 有人问：阿里云不是提供现成的k8s集群吗，为啥还要自建？吃饱了撑？
+非也非也，单纯说好与不好都是耍流氓，应由利弊权衡之：
+先说利:
+ 阿里云容器团队精心打磨，bug修复，功能改进 为k8s结合阿里云提供工具、服务进行粘合 提供一键滚动升级k8s版本 提供VPC级别的网络插件 提供aliyun-cloud-controller，能够很好的结合阿里云资源，比如vpc，路由表、SLB等 提供aliyun-disk-controller，能够直接挂载云存储(flexvolume) 开发了个application的服务，能够管理部分资源的发布，比如蓝绿部署等  再说弊:
+ 早期功能少，界面丑陋，设计不合理 比如40个节点的限制（因为路由条目最多加40条？笑） 比如默认外网暴露apiserver（10.12修复的bug忘了？好歹给个选项啊） 早期功能体验贼差，比如利用控制台无法添加节点（怀疑是自动化流程bug），只能先自己先创建ecs实例，然后作为节点添加 早期不支持network-policy（什么现在支持了？杠精滚粗，当时就直接拿flannel，开发了个支持vpc的backend就作为产品了，即使是现在的terway，也是flannel&#43;calico-policy的组合版本） 早期默认内置nginx-ingress，这就觉得有点考虑得太多了点了，属于溺爱了。 还有个诟病的，就是直接将kubernetes-dashboard直接硬生生地嵌入了阿里云容器管理后台，最最最关键的是，把最重要的全局搜索框给干掉了，偷笑:D  笔者胡说，这些有的已经不是这样子了，臭杠精，没看到是早期啊，18年5月份之前！！
+ 阿里云还有个恶心的就是，啥玩意儿都只开源第一版，就是最初的一版，应该是为了应付开源精神以及开源协议的，后面的代码都只在企业内部更新迭代。
+ 开始考虑如何自建吧（无详细步骤，只谈可行性） 参考kubeadm，先用kubeadm整一版，然后研究其参数配置，将用得着的剥离出来，然后再参考绝世好文kubernetes the hard way，一步步来罗，简单的一比。
+谈谈和阿里云结合 首先最重要的就是节点名称，你必须使用&lt;region-id&gt;.&lt;instance-id&gt;的格式去override，去扒阿里云aliyun-disk-controller创世版本，挂载磁盘至实例，都是直接读取的节点名称，然后调用阿里云api挂载的(不知道是不是写存储插件的开发脑子有坑，这么死板)，然后就去找个可用的阿里云存储插件镜像，阿里云文档中有个1.9.7可用，另外可以直接开个最新的容器服务，看最新的镜像tag。
+存储有了，再说说网络，可以使用flannel的阿里云backend插件，直接用上阿里云网络资源，但是受限于iptables的条目！！40条！！ 也可以使用calico，不过你只能用上ipip模式，更高性能的三层模式，由于阿里云实例之间无法直接路由无法启用，对于aws来说，关闭src/dst检测包过滤，可以使用三层模式。
+ 杠精：那不行，ipip overlay network，性能不行，单队列，延迟变大了，影响应用~~ 笔者：我去你****，社区文章看多了吧，谁不想使用三层模式，阿里云限制啊。再说，在网络性能足够好的条件下，又能有多少影响呢？与其在这里抠这性能，不如花点心思改变一下调用链路，优化应用啊 。等你应用优化到极致，再吹毛求疵吧。
+ DNS么直接用CoreDNS，性能杠杠的，可扩展，另外有插件可以自动扩展，这类服务属于重中之重之特重要服务，请单独调度到独立节点运行。然后forward到PowerDNS，PowerDNS在forward到阿里云100.100的DNS。
+网络说完了，说说服务暴露吧，Service资源有种类型是LoadBalancer，一般云厂商都会将其与自家的负载均衡产品结合，一旦监听到该类型资源，就创建/修改对应的负载均衡配置。在实际使用中，这种方式并不是太紧迫，我们可以workaround，使用NodePort，也可以在k8s集群内部增加四层负载均衡，反代之，然后在边缘节点暴露服务，然后监测变化，挑选固定且未占用端口，将其挂载到SLB上对外。对于http类型的，这就比较好办了，毕竟应用层有信息进行路由，我们使用traefik作为ingress-controller，调度至边缘节点，使用label或者ingress/class区分对内，对外，用途等，然后使用几个固定的四层SLB反代之。（社区已经有CRD版本的ingress，替代官方默认的ingress，既可以暴露四层，又可以暴露七层，自行搜索）
+其实现在差不多就能用了，RAM该有的权限给上，多可用区么也支持，无状态的可直接使用，有状态的依赖于volume，而阿里云最新的disk-controller也已经支持了存储卷调度VolumeSchedule。
+监控啥的，使用prometheus&#43;thanos&#43;kube-state-metrics即可，如果需要水平扩容HPA么，再增加个metrics-server（兼容heapster）
+docker仓库么，使用harbor，k8s上部署也有现成的helm chart，稍微改改也能用，另外，新版harbor也支持helm chart repository了哟，基本N个部门组，再来一个base镜像组，外加一个翻墙组(万恶的GFW)，多区域么，就同步几个基础组。
+k8s资源编排工具么，那就用helm罗，其实笔者更喜欢谷歌自家的ksonnet，带环境概念，更加富有层次，复用程度也更高，不过需要额外学一门DSL，它叫jsonnet。
+再说CI/CD流程？
+CI这块使用jenkins罗，只使用Jenkinsfile编写，基于gitops理念。
+CD这块么，使用argocd工具，也是基于gitops的。
+开发调试么，能力有限，只能使用openvpn连入k8s集群内部罗，如果你使用阿里云产品，那么可以直接访问pod ip，确实方便。
+好了，先说到这里了。"/>
+
+  <script type="application/ld+json">
+{
+  "@context": "http://schema.org",
+  "@type": "BlogPosting",
+  "headline": "谈谈在阿里云自建k8s集群",
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https:\/\/ermazi.com\/2019\/%E8%B0%88%E8%B0%88%E5%9C%A8%E9%98%BF%E9%87%8C%E4%BA%91%E8%87%AA%E5%BB%BAk8s%E9%9B%86%E7%BE%A4\/"
+  },
+  "image": {
+    "@type": "ImageObject",
+    "url": "https:\/\/ermazi.com\/cover.png",
+    "width":  800 ,
+    "height":  600 
+  },
+  "genre": "posts",
+  
+  "wordcount":  50 ,
+  "url": "https:\/\/ermazi.com\/2019\/%E8%B0%88%E8%B0%88%E5%9C%A8%E9%98%BF%E9%87%8C%E4%BA%91%E8%87%AA%E5%BB%BAk8s%E9%9B%86%E7%BE%A4\/",
+  "datePublished": "2019-03-10T01:40:34\x2b08:00",
+  "dateModified": "2019-03-10T01:40:34\x2b08:00",
+  
+  "publisher": {
+    "@type": "Organization",
+    "name": "ermazi",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https:\/\/ermazi.com\/logo.png",
+      "width":  127 ,
+      "height":  40 
+    }
+  },
+  "author": {
+    "@type": "Person",
+    "name": "ermazi"
+  },
+  "description": ""
+}
+</script>
+</head>
+
+  
+
+
+
+  <body class="">
+    <div class="wrapper">
+        <nav class="navbar">
+    <div class="container">
+        <div class="navbar-header header-logo">
+        	<a href="https://ermazi.com">二麻运维</a>
+        </div>
+        <div class="menu navbar-right">
+                
+                
+                <a class="menu-item" href="/posts/" title="">Blog</a>
+                
+                <a class="menu-item" href="/categories/" title="">Categories</a>
+                
+                <a class="menu-item" href="/about" title="">About</a>
+                
+                <a href="javascript:void(0);" class="theme-switch"><i class="iconfont icon-sun"></i></a>&nbsp;
+        </div>
+    </div>
+</nav>
+<nav class="navbar-mobile" id="nav-mobile" style="display: none">
+     <div class="container">
+        <div class="navbar-header">
+            <div>  <a href="javascript:void(0);" class="theme-switch"><i class="iconfont icon-sun"></i></a>&nbsp;<a href="https://ermazi.com">二麻运维</a></div>
+            <div class="menu-toggle">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+     
+          <div class="menu" id="mobile-menu">
+                
+                
+                <a class="menu-item" href="/posts/" title="">Blog</a>
+                
+                <a class="menu-item" href="/categories/" title="">Categories</a>
+                
+                <a class="menu-item" href="/about" title="">About</a>
+                
+        </div>
+    </div>
+</nav>
+
+    	 <main class="main">
+          <div class="container">
+      		
+<article class="post-warp">
+    <header class="post-header">
+        <h1 class="post-title">谈谈在阿里云自建k8s集群</h1>
+        <div class="post-meta">
+            Written by <a href="https://ermazi.com" rel="author">ermazi</a> with ♥ 
+                <span class="post-time">
+                    on <time datetime=2019-03-10 >10 March 2019</time>
+                </span>
+                in
+                
+                <i class="iconfont icon-timer"></i>
+                1 min
+        </div>
+    </header>
+    <div class="post-content">
+        
+
+        
+
+        
+        
+     
+          
+          
+          
+
+          
+          
+          
+
+          
+
+<blockquote>
+<p>我只是一名小小的运维，追求的是够用，极简，稳定，源码最多用于排查问题，二次开发基本是不够格的，据观察大多数人也处于我这个层级（大神忽略此条）。</p>
+</blockquote>
+
+<p><strong>有人问：阿里云不是提供现成的k8s集群吗，为啥还要自建？吃饱了撑？</strong></p>
+
+<p>非也非也，单纯说好与不好都是耍流氓，应由利弊权衡之：</p>
+
+<p>先说利:</p>
+
+<ul>
+<li>阿里云容器团队精心打磨，bug修复，功能改进</li>
+<li>为k8s结合阿里云提供工具、服务进行粘合</li>
+<li>提供一键滚动升级k8s版本</li>
+<li>提供VPC级别的网络插件</li>
+<li>提供<code>aliyun-cloud-controller</code>，能够很好的结合阿里云资源，比如<code>vpc</code>，<code>路由表</code>、<code>SLB</code>等</li>
+<li>提供<code>aliyun-disk-controller</code>，能够直接挂载云存储(<code>flexvolume</code>)</li>
+<li>开发了个<code>application</code>的服务，能够管理部分资源的发布，比如<code>蓝绿部署</code>等</li>
+</ul>
+
+<p>再说弊:</p>
+
+<ul>
+<li>早期功能少，界面丑陋，设计不合理</li>
+<li>比如40个节点的限制（因为路由条目最多加40条？笑）</li>
+<li>比如默认外网暴露apiserver（10.12修复的bug忘了？好歹给个选项啊）</li>
+<li>早期功能体验贼差，比如利用控制台无法添加节点（怀疑是自动化流程bug），只能先自己先创建ecs实例，然后作为节点添加</li>
+<li>早期不支持network-policy（什么现在支持了？杠精滚粗，当时就直接拿flannel，开发了个支持vpc的backend就作为产品了，即使是现在的terway，也是flannel+calico-policy的组合版本）</li>
+<li>早期默认内置nginx-ingress，这就觉得有点考虑得太多了点了，属于溺爱了。</li>
+<li>还有个诟病的，就是直接将kubernetes-dashboard直接硬生生地嵌入了阿里云容器管理后台，最最最关键的是，把最重要的全局搜索框给干掉了，偷笑:D</li>
+</ul>
+
+<p><strong>笔者胡说，这些有的已经不是这样子了，臭杠精，没看到是早期啊，18年5月份之前！！</strong></p>
+
+<blockquote>
+<p>阿里云还有个恶心的就是，啥玩意儿都只开源第一版，就是最初的一版，应该是为了应付开源精神以及开源协议的，后面的代码都只在企业内部更新迭代。</p>
+</blockquote>
+
+<h2 id="开始考虑如何自建吧-无详细步骤-只谈可行性">开始考虑如何自建吧（无详细步骤，只谈可行性）</h2>
+
+<p>参考kubeadm，先用kubeadm整一版，然后研究其参数配置，将用得着的剥离出来，然后再参考绝世好文<code>kubernetes the hard way</code>，一步步来罗，简单的一比。</p>
+
+<h2 id="谈谈和阿里云结合">谈谈和阿里云结合</h2>
+
+<p>首先最重要的就是节点名称，你必须使用<code>&lt;region-id&gt;.&lt;instance-id&gt;</code>的格式去override，去扒阿里云<code>aliyun-disk-controller</code>创世版本，挂载磁盘至实例，都是直接读取的节点名称，然后调用阿里云api挂载的(不知道是不是写存储插件的开发脑子有坑，这么死板)，然后就去找个可用的阿里云存储插件镜像，阿里云文档中有个1.9.7可用，另外可以直接开个最新的容器服务，看最新的镜像tag。</p>
+
+<p>存储有了，再说说网络，可以使用flannel的阿里云backend插件，直接用上阿里云网络资源，但是受限于iptables的条目！！40条！！ 也可以使用calico，不过你只能用上ipip模式，更高性能的三层模式，由于阿里云实例之间无法直接路由无法启用，对于aws来说，关闭src/dst检测包过滤，可以使用三层模式。</p>
+
+<blockquote>
+<p>杠精：那不行，<code>ipip overlay network</code>，性能不行，单队列，延迟变大了，影响应用~~ 笔者：我去你****，社区文章看多了吧，谁不想使用三层模式，阿里云限制啊。再说，在网络性能足够好的条件下，又能有多少影响呢？与其在这里抠这性能，不如花点心思改变一下调用链路，优化应用啊 。等你应用优化到极致，再吹毛求疵吧。</p>
+</blockquote>
+
+<p>DNS么直接用<code>CoreDNS</code>，性能杠杠的，可扩展，另外有插件可以自动扩展，这类服务属于重中之重之特重要服务，请单独调度到独立节点运行。然后forward到<code>PowerDNS</code>，<code>PowerDNS</code>在forward到阿里云100.100的DNS。</p>
+
+<p>网络说完了，说说服务暴露吧，Service资源有种类型是LoadBalancer，一般云厂商都会将其与自家的负载均衡产品结合，一旦监听到该类型资源，就创建/修改对应的负载均衡配置。在实际使用中，这种方式并不是太紧迫，我们可以workaround，使用NodePort，也可以在k8s集群内部增加四层负载均衡，反代之，然后在边缘节点暴露服务，然后监测变化，挑选固定且未占用端口，将其挂载到SLB上对外。对于http类型的，这就比较好办了，毕竟应用层有信息进行路由，我们使用traefik作为ingress-controller，调度至边缘节点，使用label或者ingress/class区分对内，对外，用途等，然后使用几个固定的四层SLB反代之。（社区已经有CRD版本的ingress，替代官方默认的ingress，既可以暴露四层，又可以暴露七层，自行搜索）</p>
+
+<p>其实现在差不多就能用了，RAM该有的权限给上，多可用区么也支持，无状态的可直接使用，有状态的依赖于volume，而阿里云最新的disk-controller也已经支持了存储卷调度VolumeSchedule。</p>
+
+<p>监控啥的，使用<code>prometheus</code>+<code>thanos</code>+<code>kube-state-metrics</code>即可，如果需要<code>水平扩容HPA</code>么，再增加个<code>metrics-server</code>（兼容heapster）</p>
+
+<p>docker仓库么，使用harbor，k8s上部署也有现成的helm chart，稍微改改也能用，另外，新版harbor也支持helm chart repository了哟，基本N个部门组，再来一个base镜像组，外加一个翻墙组(万恶的GFW)，多区域么，就同步几个基础组。</p>
+
+<p>k8s资源编排工具么，那就用helm罗，其实笔者更喜欢谷歌自家的ksonnet，带环境概念，更加富有层次，复用程度也更高，不过需要额外学一门DSL，它叫jsonnet。</p>
+
+<p>再说<code>CI/CD</code>流程？</p>
+
+<p>CI这块使用<code>jenkins</code>罗，只使用<code>Jenkinsfile</code>编写，基于<code>gitops</code>理念。</p>
+
+<p>CD这块么，使用<code>argocd</code>工具，也是基于<code>gitops</code>的。</p>
+
+<p>开发调试么，能力有限，只能使用<code>openvpn</code>连入k8s集群内部罗，如果你使用阿里云产品，那么可以直接访问<code>pod ip</code>，确实方便。</p>
+
+<p>好了，先说到这里了。</p>
+
+    </div>
+
+    <div class="post-copyright">
+             
+            <p class="copyright-item">
+                <span>Author:</span>
+                <span>ermazi </span>
+                </p>
+            
+           
+            <p class="copyright-item">
+                    <span>Words:</span>
+                   <span>50</span>
+            </p>
+            
+            <p class="copyright-item">
+                
+                <span>Share:</span>
+                <span>
+
+      
+      
+      
+      
+      
+      
+      
+        <a href="//www.linkedin.com/shareArticle?url=https%3a%2f%2fermazi.com%2f2019%2f%25E8%25B0%2588%25E8%25B0%2588%25E5%259C%25A8%25E9%2598%25BF%25E9%2587%258C%25E4%25BA%2591%25E8%2587%25AA%25E5%25BB%25BAk8s%25E9%259B%2586%25E7%25BE%25A4%2f&amp;title=%e8%b0%88%e8%b0%88%e5%9c%a8%e9%98%bf%e9%87%8c%e4%ba%91%e8%87%aa%e5%bb%bak8s%e9%9b%86%e7%be%a4" target="_blank" title="Share on LinkedIn">
+          <i class="iconfont icon-linkedin"></i>
+        </a>
+        
+      
+      
+        
+      
+        
+      
+
+          
+
+          
+
+          
+        <a href="//www.douban.com/recommend/?url=https%3a%2f%2fermazi.com%2f2019%2f%25E8%25B0%2588%25E8%25B0%2588%25E5%259C%25A8%25E9%2598%25BF%25E9%2587%258C%25E4%25BA%2591%25E8%2587%25AA%25E5%25BB%25BAk8s%25E9%259B%2586%25E7%25BE%25A4%2f&amp;title=%e8%b0%88%e8%b0%88%e5%9c%a8%e9%98%bf%e9%87%8c%e4%ba%91%e8%87%aa%e5%bb%bak8s%e9%9b%86%e7%be%a4" target="_blank" title="Share on Douban ">
+            <i class="iconfont icon-douban"></i>
+          </a>
+          
+
+          
+        <a href="//service.weibo.com/share/share.php?url=https%3a%2f%2fermazi.com%2f2019%2f%25E8%25B0%2588%25E8%25B0%2588%25E5%259C%25A8%25E9%2598%25BF%25E9%2587%258C%25E4%25BA%2591%25E8%2587%25AA%25E5%25BB%25BAk8s%25E9%259B%2586%25E7%25BE%25A4%2f&amp;appkey=&amp;title=%e8%b0%88%e8%b0%88%e5%9c%a8%e9%98%bf%e9%87%8c%e4%ba%91%e8%87%aa%e5%bb%bak8s%e9%9b%86%e7%be%a4" target="_blank" title="Share on Douban ">
+            <i class="iconfont icon-weibo"></i>
+          </a>
+          
+</span>
+                
+            </p>
+
+             
+            <p class="copyright-item">
+                Released under <a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a>
+            </p>
+            
+    </div>
+
+  
+    <div class="post-tags">
+        
+        <section>
+                <a href="javascript:window.history.back();">Back</a></span> · 
+                <span><a href="https://ermazi.com">Home</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav">
+        
+        <a href="https://ermazi.com/2019/go%E8%AF%AD%E8%A8%80%E5%AE%9E%E6%88%98%E4%B9%8B%E9%A1%B9%E7%9B%AE%E8%AF%B4%E6%98%8E/" class="prev" rel="prev" title="Go语言实战之项目说明"><i class="iconfont icon-dajiantou"></i>&nbsp;Go语言实战之项目说明</a>
+         
+        
+        <a href="https://ermazi.com/2019/ucloud%E4%BD%BF%E7%94%A8%E4%BD%93%E9%AA%8C%E6%8A%A5%E5%91%8A/" class="next" rel="next" title="UCloud使用体验">UCloud使用体验&nbsp;<i class="iconfont icon-xiaojiantou"></i></a>
+        
+    </div>
+
+    <div class="post-comment">
+          
+          <div id="disqus_thread"></div>
+    <script type="text/javascript">
+    (function() {
+      
+      
+      if (window.location.hostname === 'localhost') return;
+
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      var disqus_shortname = 'ermazi';
+      dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+  
+
+
+          
+    </div>
+</article>
+          </div>
+		   </main>
+      <footer class="footer">
+    <div class="copyright">
+        &copy;
+        
+        <span itemprop="copyrightYear">2012 - 2019</span>
+        
+         
+            <span class="author" itemprop="copyrightHolder"><a href="https://ermazi.com">ermazi</a> | </span>
+         
+
+		  <span>Crafted with ❤️ by <a href="https://github.com/Fastbyte01/KeepIt" target="_blank" rel="external nofollow noopener noreffer">KeepIt</a> & <a href="https://gohugo.io/" target="_blank" rel="external nofollow noopener noreffer">Hugo</a></span>
+    </div>
+</footer>
+
+
+
+
+
+
+
+
+
+
+
+
+    
+    
+    <script src="/js/vendor_no_gallery.min.js" async=""></script>
+    
+  
+
+
+
+
+
+
+
+     </div>
+  </body>
+</html>
